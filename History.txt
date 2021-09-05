@@ -1,0 +1,83 @@
+ARMH6280 revision history
+-=-=-=-=-=-=-=-=-=-=-=-=-=-
+
+
+V2.9.1 - 2021-02-01 (FluBBa)
+	Removed dependency on EMU_RAM for zero page register init.
+
+V2.9.0 - 2018-07-18 (FluBBa)
+	Moved timer code to h6280.
+
+V2.8.1 - 2016-08-03 (FluBBa)
+	Changed assembler syntax to unified.
+
+V2.8.0 - 2014-09-17 (FluBBa)
+	Optimized JSR.
+
+V2.7.0 - 2013-01-07 (FluBBa)
+	Optimized all the fransfer operands for size, again.
+	Moved rommap table from memory.s to h6280.s.
+
+V2.6.0 - 2012-03-11 (FluBBa)
+	Fixed potential carry corruption on ASL opcodes.
+	Fixed potential IO issues on the fransfer operands.
+	Optimized all the fransfer operands for size.
+
+V2.5.0 - 2011-08-15 (FluBBa)
+	Version without a op-code LUT, 5-10% faster.
+
+V2.0.0 - 2010-01-19 (FluBBa)
+	Started conversion to GCC format.
+
+V1.3.0 - 2009-04-07 (FluBBa)
+	Correct calculation of flags when using ADC/SBC in decimal mode.
+	Fixed cpu timing a bit.
+
+V1.2.0 - 2004-11-30 (FluBBa)
+	Fixed ROL & ROR instructions a bit.
+	Fixed ADC & SBC instructions a bit.
+
+V1.1.0 - 2004-07-18 (FluBBa)
+	Minor CPU optimizations.
+
+V1.0.0 - 2004-06-19 (FluBBa)
+	Fixed a problem with the CLI instruction in the CPU.
+
+V0.9.0 - 2004-05-15 (FluBBa)
+	Rewrote parts of the CPU, should be a tiny bit faster.
+
+V0.8.0 - 2004-04-23 (FluBBa)
+	Fixed the CLI instruction.
+	Fixed the ADC when D & T bit set.
+	Fixed "indexed indirect X" addressing to be more accurate.
+	Changed D & I location to register instead of memory.
+
+V0.7.0 - 2004-01-15 (FluBBa)
+	Optimized all the fransfer operands.
+	Fixed the TRB & TSB operands.
+
+V0.6.0 - 2004-01-11 (FluBBa)
+	Fixed LSR from zeropage,x.
+
+V0.5.0 - 2003-06-22 (FluBBa)
+	Added check for IRQ after CLI/RTI, fixed Outrun/Bomberman intro.
+	Fixed and optimized the accumulator shift.
+	Fixed TAI & TIA instructions.
+	Changed assignment of X & Y register.
+
+V0.4.0 - 2003-05-23 (FluBBa)
+	Decimal mode disable in IRQ.
+
+V0.3.0 - 2003-05-06 (FluBBa)
+	Fixed some CPU problems.
+
+V0.2.0 - 2003-04-09 (FluBBa)
+	Fixed cycles counting (faster emulation).
+	Fixed decimal mode of SBC.
+
+V0.1.0 - 2003-04-01 (FluBBa)
+	First release.
+
+V0.0.0 - 2003-xx-xx (FluBBa)
+	Started Coding.
+

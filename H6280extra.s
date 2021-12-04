@@ -70,7 +70,7 @@ _80y:	;@ BRA				branch always
 ;@----------------------------------------------------------------------------
 _90y:	;@ BCC *
 ;@----------------------------------------------------------------------------
-	tst cycles,#CYC_C			;@ Test Carry
+	tst cycles,#CYC_C				;@ Test Carry
 	bne noBranch
 	ldrsb r0,[h6280pc],#1
 	add h6280pc,h6280pc,r0
@@ -80,7 +80,7 @@ _90y:	;@ BCC *
 ;@----------------------------------------------------------------------------
 _B0y:	;@ BCS *
 ;@----------------------------------------------------------------------------
-	tst cycles,#CYC_C			;@ Test Carry
+	tst cycles,#CYC_C				;@ Test Carry
 	beq noBranch
 	ldrsb r0,[h6280pc],#1
 	add h6280pc,h6280pc,r0
@@ -209,37 +209,37 @@ h6280Hacks:			;@ called by CPU_reset (r0-r9 are free to use)
 //	str lr,[sp,#-4]!
 
 ;@---cpu reset
-	ldr r8,=g_hackFlags
+	ldr r8,=gHackFlags
 	ldr r8,[r8]
-	ldr r1,midhack7
+	ldr r1,midHack7
 	tst r8,#0x40000000			;@ Check hack flags for F0 hack12.
-	ldrne r1,superhack12
+	ldrne r1,superHack12
 	tst r8,#0x08000000			;@ Check hack flags for F0 hack8.
-	ldrne r1,midhack8
+	ldrne r1,midHack8
 	tst r8,#0x04000000			;@ Check hack flags for F0 hack11.
-	ldrne r1,superhack11
+	ldrne r1,superHack11
 	ldr r2,=_F0z
 	str r1,[r2]
 
-	ldr r1,midhack7				;@ D0 special hacks
+	ldr r1,midHack7				;@ D0 special hacks
 	tst r8,#0x02000000			;@ Check hack flags for D0-0xFB hack.
-	ldrne r1,lowhack5
+	ldrne r1,lowHack5
 	tst r8,#0x20000000			;@ Check hack flags for D0-0xF6 hack+.
-	ldrne r1,superhack10
+	ldrne r1,superHack10
 	tst r8,#0x10000000			;@ Check hack flags for D0-0xFC hack-.
-	ldrne r1,lowhack4
+	ldrne r1,lowHack4
 	ldr r2,=_D0z
 	str r1,[r2]
 
-	ldr r0,=g_hwFlags
+	ldr r0,=gHwFlags
 	ldr r0,[r0]
 	tst r0,#NOCPUHACK			;@ Load opcode set
-	adr r2,hackops
-	adrne r2,normalops			;@ This makes all cpuhacks go away if it's choosen.
+	adr r2,hackOps
+	adrne r2,normalOps			;@ This makes all cpuhacks go away if it's choosen.
 	tsteq r8,#0x80000000		;@ Check hack flags for nojump hack.
-	adreq r1,jmpops
-	adrne r1,normalops
-	adr r3,opindex
+	adreq r1,jmpOps
+	adrne r1,normalOps
+	adr r3,opIndex
 	mov r7,#1
 	mov r4,#11					;@ Number of hacks
 nr0:
@@ -254,28 +254,28 @@ nr0:
 	bx lr
 //	ldr pc,[sp],#4
 ;@----------------------------------------------------------------------------
-normalops:
+normalOps:
 	.long _10,_30,_4C,_50,_70,_80,_90,_B0,_D0,_F0,_58,_E3
-jmpops:
+jmpOps:
 	.long _10,_30,_4Cx,_50,_70,_80,_90,_B0,_D0,_F0,_58,_E3x
-hackops:
+hackOps:
 	.long _10y,_30y,0,0,0,_80y,_90y,_B0y,_D0y,_F0y,_58x,_E3
-opindex:
+opIndex:
 //	.long h6280OpTable+0x10*4,h6280OpTable+0x30*4,h6280OpTable+0x4C*4,h6280OpTable+0x50*4,h6280OpTable+0x70*4
 //	.long h6280OpTable+0x80*4,h6280OpTable+0x90*4,h6280OpTable+0xB0*4,h6280OpTable+0xD0*4,h6280OpTable+0xF0*4,h6280OpTable+0x58*4,h6280OpTable+0xE3*4
-superhack12:
+superHack12:
 	cmp r0,#-12					;@ Speed hack+ for SF2CE, Deep Blue(D0)
-superhack11:
+superHack11:
 	cmp r0,#-11					;@ Speed hack+ for Morita Shogi PC (F0)
-superhack10:
+superHack10:
 	cmp r0,#-10					;@ Speed hack+ for Galaga(D0)
-midhack8:
+midHack8:
 	cmp r0,#-8					;@ Speed hack normal
-midhack7:
+midHack7:
 	cmp r0,#-7					;@ Speed hack normal
-lowhack5:
+lowHack5:
 	cmp r0,#-5					;@ Speed hack low
-lowhack4:
+lowHack4:
 	cmp r0,#-4					;@ Speed hack low
 ;@----------------------------------------------------------------------------
 

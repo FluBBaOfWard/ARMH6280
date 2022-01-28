@@ -1,3 +1,10 @@
+//
+//  H6280mac.h
+//  ARMH6280
+//
+//  Created by Fredrik Ahlström on 2003-01-01.
+//  Copyright © 2003-2021 Fredrik Ahlström. All rights reserved.
+//
 
 #include "H6280.i"
 							;@ ARM flags

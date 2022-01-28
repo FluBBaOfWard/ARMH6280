@@ -1,3 +1,10 @@
+//
+//  H6280.i
+//  ARMH6280
+//
+//  Created by Fredrik Ahlström on 2003-01-01.
+//  Copyright © 2003-2021 Fredrik Ahlström. All rights reserved.
+//
 
 							;@ r0,r1,r2=temp regs
 	h6280nz		.req r3			;@ bit 31=N, Z=1 if bits 0-7=0

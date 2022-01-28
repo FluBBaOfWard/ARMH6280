@@ -1,3 +1,11 @@
+//
+//  H6280.h
+//  ARMH6280
+//
+//  Created by Fredrik Ahlström on 2003-01-01.
+//  Copyright © 2003-2021 Fredrik Ahlström. All rights reserved.
+//
+
 #ifndef H6280_HEADER
 #define H6280_HEADER
 

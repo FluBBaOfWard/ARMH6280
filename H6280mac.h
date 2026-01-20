@@ -3,8 +3,11 @@
 //  ARMH6280
 //
 //  Created by Fredrik Ahlström on 2003-01-01.
-//  Copyright © 2003-2021 Fredrik Ahlström. All rights reserved.
+//  Copyright © 2003-2026 Fredrik Ahlström. All rights reserved.
 //
+#if !__ASSEMBLER__
+	#error This header file is only for use in assembly files!
+#endif
 
 #include "H6280.i"
 							;@ ARM flags
@@ -104,13 +107,18 @@
 	.macro executeOpCode count
 	subs cycles,cycles,#(\count)*4*CYCLE
 	addpl pc,h6280optbl,r0,lsl#6
-	b outOfCycles
+	b h6280OutOfCycles
 	.endm
 
 	.macro executeOpCode_c count
 	sbcs cycles,cycles,#(\count)*4*CYCLE
 	addpl pc,h6280optbl,r0,lsl#6
-	b outOfCycles
+	b h6280OutOfCycles
+	.endm
+
+	.macro executeNext
+	getNextOpcode
+	add pc,h6280optbl,r0,lsl#6
 	.endm
 
 	.macro fetch count

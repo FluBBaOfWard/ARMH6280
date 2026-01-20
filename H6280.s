@@ -1,15 +1,10 @@
 //
 //  H6280.s
-//  ARMH6280
+//  ARMH6280 Hudson/NEC HuC6280 CPU emulator
 //
 //  Created by Fredrik Ahlström on 2003-01-01.
-//  Copyright © 2003-2021 Fredrik Ahlström. All rights reserved.
+//  Copyright © 2003-2026 Fredrik Ahlström. All rights reserved.
 //
-
-/*
- Hudson/NEC HuC6280 CPU emulator
-*/
-
 #ifdef __arm__
 
 #include "H6280mac.h"
@@ -18,9 +13,9 @@
 	.arm
 
 #ifdef ARM9
-	.section .itcm				;@ For the NDS
+	.section .itcm, "ax", %progbits		;@ For the NDS
 #elif GBA
-	.section .iwram				;@ For the GBA
+	.section .iwram, "ax", %progbits	;@ For the GBA
 #else
 	.section .text
 #endif
@@ -31,10 +26,10 @@
 	.global h6280RestoreAndRunXCycles
 	.global h6280RunXCycles
 	.global h6280Go
-	.global h6280CheckIrqDisable
+	.global h6280CheckIrqs
 	.global h6280OpTable
 	.global opCodeEnd
-	.global outOfCycles
+	.global h6280OutOfCycles
 	.global huMapper
 	.global SF2Mapper
 	.global irqRead
@@ -496,7 +491,7 @@ _40:	;@ RTI
 	pop16						;@ Pop the return address
 	encodePC
 	eatcycles 7
-	b h6280CheckIrqDisable		;@ Fixes Neutopia II (J), Sinistron & Talespin.
+	b h6280CheckIrqs			;@ Fixes Neutopia II (J), Sinistron & Talespin.
 ;@	fetch 7
 ;@----------------------------------------------------------------------------
 	alignOpCode
@@ -1756,10 +1751,10 @@ wrTbl:
 //	andpl r1,r1,#0x3F
 //	ldrpl r1,[r7,r1,lsl#2]
 //	strpl r1,[r6,r0,lsl#4]
+	ldmfd sp!,{r3-r8,lr}
 ;@----------------------------------------------------------------------------
 flush:						;@ Update h6280pc & lastbank
 ;@----------------------------------------------------------------------------
-	ldmfd sp!,{r3-r8,lr}
 ;@----------------------------------------------------------------------------
 retranslatePCToOffset:
 ;@----------------------------------------------------------------------------
@@ -1779,26 +1774,10 @@ SF2Mapper:
 	.long 0
 
 ;@----------------------------------------------------------------------------
-doBRK:						;@ Moved here for alignment
-;@----------------------------------------------------------------------------
-	mov r11,r11					;@ No$GBA debug!
-	loadLastBank r0
-	add h6280pc,h6280pc,#2
-	sub r0,h6280pc,r0
-	push16						;@ Save PC
-
-	encodeP (B)					;@ Save P
-	ldr r12,interruptVectors	;@=BRK_VECTOR
-	b irqContinue
-;@----------------------------------------------------------------------------
-outOfCycles:
-	sub h6280pc,h6280pc,#1
-	ldr pc,[h6280optbl,#h6280NextTimeout]
-;@----------------------------------------------------------------------------
 h6280SetNMIPin:
 ;@----------------------------------------------------------------------------
 	cmp r0,#0
-	movne r0,#8
+	movne r0,#NMI_F
 	ldrb r1,[h6280optbl,#h6280NMIPin]
 	strb r0,[h6280optbl,#h6280NMIPin]
 	bics r1,r0,r1
@@ -1811,10 +1790,23 @@ h6280SetIRQPin:
 ;@----------------------------------------------------------------------------
 	cmp r0,#0
 	ldrb r0,[h6280optbl,#h6280IrqPending]
-	biceq r0,r0,#0x02
-	orrne r0,r0,#0x02
+	biceq r0,r0,#VDCIRQ_F
+	orrne r0,r0,#VDCIRQ_F
 	strb r0,[h6280optbl,#h6280IrqPending]
 	bx lr
+;@----------------------------------------------------------------------------
+h6280DelayIrqCheck:				;@ Irq can be delayed by 1 instruction.
+;@----------------------------------------------------------------------------
+	orr cycles,cycles,#0xC0000000
+	executeNext
+;@----------------------------------------------------------------------------
+h6280OutOfCycles:
+;@----------------------------------------------------------------------------
+	sub h6280pc,h6280pc,#1
+	mov cycles,cycles,lsl#2		;@ Check for delayed irq check.
+	movs cycles,cycles,asr#2
+	bpl h6280CheckIrqs
+	ldr pc,[h6280optbl,#h6280NextTimeout]
 
 ;@----------------------------------------------------------------------------
 h6280RestoreAndRunXCycles:	;@ r0 = Number of fast cycles to run
@@ -1840,7 +1832,7 @@ timerScanlineHook:
 	adr r1,timerFix
 	str r1,[h6280optbl,#h6280NextTimeout]
 ;@- - - - - - - - - - - - - - - - -
-;@	setirqpin 4
+;@	setirqpin TIMIRQ_F
 	ldrb r1,[h6280optbl,#h6280TimerLatch]
 	add r1,r1,#1
 	add r2,r2,r1,lsl#12			;@ Latch x 1024 x 4
@@ -1852,7 +1844,7 @@ addCyclesNoTimer:
 	add cycles,cycles,r0,lsl r1			;@ Add cycles at current speed
 
 ;@----------------------------------------------------------------------------
-h6280CheckIrqDisable:
+h6280CheckIrqs:
 	ldr r1,[h6280optbl,#h6280IrqPending]
 	tst cycles,#CYC_I
 	bicne r1,r1,#0x0700
@@ -1885,11 +1877,23 @@ irqContinue:
 	encodePC					;@ Get IRQ vector
 
 	fetch 8
+;@----------------------------------------------------------------------------
+doBRK:						;@ Moved here for alignment
+;@----------------------------------------------------------------------------
+	mov r11,r11					;@ No$GBA debug!
+	loadLastBank r0
+	add h6280pc,h6280pc,#2
+	sub r0,h6280pc,r0
+	push16						;@ Save PC
+
+	encodeP (B)					;@ Save P
+	ldr r12,interruptVectors	;@=BRK_VECTOR
+	b irqContinue
 
 ;@----------------------------------------------------------------------------
 timerFix:				;@ Timer fix.
 ;@----------------------------------------------------------------------------
-	setirqpin 4
+	setirqpin TIMIRQ_F
 ;@----------------------------------------------------------------------------
 cliFix:					;@ Cli should be delayed by 1 instruction.
 ;@----------------------------------------------------------------------------
@@ -2300,12 +2304,12 @@ irq2Write:					;@ Set disabled IRQs
 ;@----------------------------------------------------------------------------
 irq3Write:					;@ Acknowledge Timer IRQ
 ;@----------------------------------------------------------------------------
-	clearirqpin 4
+	clearirqpin TIMIRQ_F
 	bx lr
 
 ;@----------------------------------------------------------------------------
 #ifdef ARM9
-	.section .dtcm, "ax", %progbits				;@ For the NDS
+	.section .dtcm, "a", %progbits				;@ For the NDS
 #endif
 ;@----------------------------------------------------------------------------
 h6280OpTableT:

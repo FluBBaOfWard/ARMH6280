@@ -3,9 +3,8 @@
 //  ARMH6280
 //
 //  Created by Fredrik Ahlström on 2003-01-01.
-//  Copyright © 2003-2021 Fredrik Ahlström. All rights reserved.
+//  Copyright © 2003-2026 Fredrik Ahlström. All rights reserved.
 //
-
 #ifdef __arm__
 
 #include "H6280mac.h"
@@ -13,9 +12,9 @@
 	.syntax unified
 
 #ifdef ARM9
-	.section .itcm				;@ For the NDS
+	.section .itcm, "ax", %progbits		;@ For the NDS
 #elif GBA
-	.section .iwram				;@ For the GBA
+	.section .iwram, "ax", %progbits	;@ For the GBA
 #else
 	.section .text
 #endif

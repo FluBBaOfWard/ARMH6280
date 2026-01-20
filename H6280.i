@@ -3,8 +3,11 @@
 //  ARMH6280
 //
 //  Created by Fredrik Ahlström on 2003-01-01.
-//  Copyright © 2003-2021 Fredrik Ahlström. All rights reserved.
+//  Copyright © 2003-2026 Fredrik Ahlström. All rights reserved.
 //
+#if !__ASSEMBLER__
+	#error This header file is only for use in assembly files!
+#endif
 
 							;@ r0,r1,r2=temp regs
 	h6280nz		.req r3			;@ bit 31=N, Z=1 if bits 0-7=0
@@ -17,6 +20,15 @@
 	h6280optbl	.req r10
 	h6280zpage	.req r11		;@ PCE_RAM
 	addy		.req r12		;@ keep this at r12 (scratch for APCS)
+
+;@----------------------------------------------------------------------------
+;@ IRQ flags
+	.equ BRKIRQ_F, 0x01			;@ External IRQ (CD-ROM) flag
+	.equ VDCIRQ_F, 0x02			;@ VDC IRQ Flag
+	.equ TIMIRQ_F, 0x04			;@ Timer IRQ flag
+	.equ NMI_F,    0x08			;@ NMI flag
+	.equ RESET_F,  0x10			;@ Reset flag
+;@----------------------------------------------------------------------------
 
 	.struct -128				// Changes section so make sure it's set before real code.
 h6280Regs:
@@ -45,7 +57,7 @@ h6280NextTimeout_:	.space 4
 h6280NextTimeout:	.space 4
 h6280End:
 h6280RomMap:		.space 32
-#define h6280Size (h6280End-h6280Regs)
+h6280Size  = h6280End-h6280Regs
 //h6280_opz:			.space 256*4
 
 ;@----------------------------------------------------------------------------

@@ -137,7 +137,7 @@ _E3z:
 	ldrb r0,[h6280pc],#3
 	orr r3,r3,r0,lsl#8			;@ Load r3 = source
 	mov r1,r3,lsr#13
-	add r6,h6280optbl,#h6280RomMap
+	add r6,h6280ptr,#h6280RomMap
 	ldr r0,[r6,r1,lsl#2]
 	add r3,r3,r0				;@ r3 = real address.
 

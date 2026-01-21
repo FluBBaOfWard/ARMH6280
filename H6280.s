@@ -9,23 +9,11 @@
 
 #include "H6280mac.h"
 
-	.syntax unified
-	.arm
-
-#ifdef ARM9
-	.section .itcm, "ax", %progbits		;@ For the NDS
-#elif GBA
-	.section .iwram, "ax", %progbits	;@ For the GBA
-#else
-	.section .text
-#endif
-
 	.global h6280Reset
 	.global h6280SetNMIPin
 	.global h6280SetIRQPin
 	.global h6280RestoreAndRunXCycles
 	.global h6280RunXCycles
-	.global h6280Go
 	.global h6280CheckIrqs
 	.global h6280OpTable
 	.global opCodeEnd
@@ -51,6 +39,17 @@
 	.global _D0
 	.global _F0
 	.global _E3
+
+	.syntax unified
+	.arm
+
+#ifdef ARM9
+	.section .itcm, "ax", %progbits		;@ For the NDS
+#elif GBA
+	.section .iwram, "ax", %progbits	;@ For the GBA
+#else
+	.section .text
+#endif
 
 	alignOpCode
 h6280StateStart:
@@ -83,9 +82,7 @@ _00:	;@ BRK				error?
 	ldrb r0,[h6280pc]
 	cmp r0,#0					;@ Real BRK?
 	beq doBRK
-h6280Go:
-	fetch 0
-	.pool
+	b h6280Go
 ;@----------------------------------------------------------------------------
 	alignOpCode
 _01:	;@ ORA ($nn,X)
@@ -339,10 +336,14 @@ _27:	;@ RMB2
 _28:	;@ PLP
 ;@----------------------------------------------------------------------------
 	pop8 r0
+	eor r2,cycles,r0
+	and r2,r2,cycles
 	decodePF
-;@	eatcycles 4
-;@	b H6280_checkirqdisable		;@ Fixes? Breaks "Maniac Pro wrestling"
-	fetch 4
+	eatcycles 4
+
+	tst r2,#CYC_I
+	bne h6280DelayIrqCheck
+	executeNext
 ;@----------------------------------------------------------------------------
 	alignOpCode
 _29:	;@ AND #$nn
@@ -509,7 +510,7 @@ _42:	;@ SAY Swap A & Y
 _43:	;@ TMA #$nn			Read from Memory mapper, !!! should this set flags?
 ;@----------------------------------------------------------------------------
 	ldrb r0,[h6280pc],#1
-	add r2,h6280optbl,#h6280MapperState
+	add r2,h6280ptr,#h6280MapperState
 	clz r0,r0
 	rsb r0,r0,#0x1f
 	ldrb r0,[r2,r0]
@@ -577,7 +578,7 @@ _4C:	;@ JMP $nnnn
 	ldrb r0,[h6280pc]
 	ldrb h6280pc,[h6280pc,#1]
 //	encodePC
-	add r2,h6280optbl,#h6280RomMap
+	add r2,h6280ptr,#h6280RomMap
 	mov r1,h6280pc,lsr#5
 	ldr r1,[r2,r1,lsl#2]		;@ in: h6280pc.
 	orr h6280pc,r0,h6280pc,lsl#8
@@ -631,11 +632,11 @@ _53:	;@ TAM #$nn			Write to Memory mapper
 	alignOpCode
 _54:	;@ CSL				Change Speed Low
 ;@----------------------------------------------------------------------------
-	ldrb r1,[h6280optbl,#h6280ClockSpeed]
+	ldrb r1,[h6280ptr,#h6280ClockSpeed]
 	cmp r1,#CYC_SHIFT
 	beq noSpeedChg0
 	mov r1,#CYC_SHIFT
-	strb r1,[h6280optbl,#h6280ClockSpeed]
+	strb r1,[h6280ptr,#h6280ClockSpeed]
 	and r0,cycles,#CYC_MASK
 	mov cycles,cycles,asr#CYC_SHIFT+2
 	orr cycles,r0,cycles,lsl#CYC_SHIFT
@@ -663,18 +664,11 @@ _57:	;@ RMB5
 	alignOpCode
 _58:	;@ CLI
 ;@----------------------------------------------------------------------------
+	eatCycles 2
+	tst cycles,#CYC_I
 	bic cycles,cycles,#CYC_I
-	eatcycles 2
-
-	ldr r0,=cliFix						;@ Check IRQ lines after next instructions
-	str r0,[h6280optbl,#h6280NextTimeout]
-	ldr r1,[h6280optbl,#h6280ClockSpeed]
-	mov r0,cycles,asr r1				;@ Cycles without flags
-	str r0,[h6280optbl,#h6280OldCycles]	;@ Save old cycles so we can use them later on.
-	clearcycles							;@ Clear cycles, save cpu bits
-
+	bne h6280DelayIrqCheck
 	fetch 0
-	.pool
 ;@----------------------------------------------------------------------------
 	alignOpCode
 _59:	;@ EOR $nnnn,Y
@@ -1438,11 +1432,11 @@ _D3:	;@ TIN $nnnn,$nnnn,#$nnnn	[Transfer Inc None]
 	alignOpCode
 _D4:	;@ CSH					Change Speed High
 ;@----------------------------------------------------------------------------
-	ldrb r1,[h6280optbl,#h6280ClockSpeed]
+	ldrb r1,[h6280ptr,#h6280ClockSpeed]
 	cmp r1,#CYC_SHIFT+2
 	beq noSpeedChg1
 	mov r1,#CYC_SHIFT+2
-	strb r1,[h6280optbl,#h6280ClockSpeed]
+	strb r1,[h6280ptr,#h6280ClockSpeed]
 	and r0,cycles,#CYC_MASK
 	bic cycles,cycles,#CYC_MASK
 	orr cycles,r0,cycles,lsl#2
@@ -1736,8 +1730,8 @@ wrTbl:
 	rsbs r0,r0,#0x1f
 	ldr r5,=h6280MemReadTbl
 	ldr r6,=h6280MemWriteTbl
-	add r7,h6280optbl,#h6280RomMap
-	add r8,h6280optbl,#h6280MapperState
+	add r7,h6280ptr,#h6280RomMap
+	add r8,h6280ptr,#h6280MapperState
 	sub r2,r2,r0,lsl#13
 	strpl r3,[r5,r0,lsl#2]		;@ readmem_tbl
 	strpl r4,[r6,r0,lsl#2]		;@ writemem_tb
@@ -1764,7 +1758,7 @@ retranslatePCToOffset:
 translatePCToOffset:		;@ In = h6280pc, out = translated h6280pc
 ;@----------------------------------------------------------------------------
 	and r0,h6280pc,#0xE000
-	add r1,h6280optbl,#h6280RomMap
+	add r1,h6280ptr,#h6280RomMap
 	ldr r0,[r1,r0,lsr#11]		;@ In: h6280pc.
 	storeLastBank r0
 	add h6280pc,h6280pc,r0
@@ -1774,25 +1768,25 @@ SF2Mapper:
 	.long 0
 
 ;@----------------------------------------------------------------------------
-h6280SetNMIPin:
+h6280SetNMIPin:				;@ NMI is edge triggered
 ;@----------------------------------------------------------------------------
 	cmp r0,#0
 	movne r0,#NMI_F
-	ldrb r1,[h6280optbl,#h6280NMIPin]
-	strb r0,[h6280optbl,#h6280NMIPin]
+	ldrb r1,[h6280ptr,#h6280NMIPin]
+	strb r0,[h6280ptr,#h6280NMIPin]
 	bics r1,r0,r1
-	ldrbne r0,[h6280optbl,#h6280IrqPending]
+	ldrbne r0,[h6280ptr,#h6280IrqPending]
 	orrne r0,r0,r1
-	strbne r0,[h6280optbl,#h6280IrqPending]
+	strbne r0,[h6280ptr,#h6280IrqPending]
 	bx lr
 ;@----------------------------------------------------------------------------
 h6280SetIRQPin:
 ;@----------------------------------------------------------------------------
 	cmp r0,#0
-	ldrb r0,[h6280optbl,#h6280IrqPending]
+	ldrb r0,[h6280ptr,#h6280IrqPending]
 	biceq r0,r0,#VDCIRQ_F
 	orrne r0,r0,#VDCIRQ_F
-	strb r0,[h6280optbl,#h6280IrqPending]
+	strb r0,[h6280ptr,#h6280IrqPending]
 	bx lr
 ;@----------------------------------------------------------------------------
 h6280DelayIrqCheck:				;@ Irq can be delayed by 1 instruction.
@@ -1806,12 +1800,12 @@ h6280OutOfCycles:
 	mov cycles,cycles,lsl#2		;@ Check for delayed irq check.
 	movs cycles,cycles,asr#2
 	bpl h6280CheckIrqs
-	ldr pc,[h6280optbl,#h6280NextTimeout]
+	ldr pc,[h6280ptr,#h6280NextTimeout]
 
 ;@----------------------------------------------------------------------------
 h6280RestoreAndRunXCycles:	;@ r0 = Number of fast cycles to run
 ;@----------------------------------------------------------------------------
-	add r1,h6280optbl,#h6280Regs
+	add r1,h6280ptr,#h6280Regs
 	ldmia r1,{h6280nz-h6280pc,h6280zpage}	;@ Restore H6280 state
 ;@----------------------------------------------------------------------------
 h6280RunXCycles:			;@ r0 = Number of fast cycles to run
@@ -1819,40 +1813,43 @@ h6280RunXCycles:			;@ r0 = Number of fast cycles to run
 ;@----------------------------------------------------------------------------
 timerScanlineHook:
 ;@----------------------------------------------------------------------------
-	ldrb r1,[h6280optbl,#h6280TimerEnable]
+	ldrb r1,[h6280ptr,#h6280TimerEnable]
 	tst r1,#1
 	beq timerDisabled
-	ldr r1,[h6280optbl,#h6280TimerCycles]
+	ldr r1,[h6280ptr,#h6280TimerCycles]
 	subs r2,r1,r0,lsl#2
 	bpl noTIrqYet
 ;@- - - - - - - - - - - - - - - - -
 	mov r0,r1,lsr#2
 	rsb r1,r2,#0
-	str r1,[h6280optbl,#h6280OldCycles]	;@ Save as many cycles as we steal so we can use them later on.
+	str r1,[h6280ptr,#h6280OldCycles]	;@ Save as many cycles as we steal so we can use them later on.
 	adr r1,timerFix
-	str r1,[h6280optbl,#h6280NextTimeout]
+	str r1,[h6280ptr,#h6280NextTimeout]
 ;@- - - - - - - - - - - - - - - - -
-;@	setirqpin TIMIRQ_F
-	ldrb r1,[h6280optbl,#h6280TimerLatch]
+;@	setIrqPin TIMIRQ_F
+	ldrb r1,[h6280ptr,#h6280TimerLatch]
 	add r1,r1,#1
 	add r2,r2,r1,lsl#12			;@ Latch x 1024 x 4
 noTIrqYet:
-	str r2,[h6280optbl,#h6280TimerCycles]
+	str r2,[h6280ptr,#h6280TimerCycles]
 timerDisabled:
 addCyclesNoTimer:
-	ldrb r1,[h6280optbl,#h6280ClockSpeed]
+	ldrb r1,[h6280ptr,#h6280ClockSpeed]
 	add cycles,cycles,r0,lsl r1			;@ Add cycles at current speed
 
 ;@----------------------------------------------------------------------------
 h6280CheckIrqs:
-	ldr r1,[h6280optbl,#h6280IrqPending]
+	ldr r1,[h6280ptr,#h6280IrqPending]
 	tst cycles,#CYC_I
 	bicne r1,r1,#0x0700
 	ands r0,r1,r1,lsr#8
-	beq h6280Go
+	bne takeIRQ
+h6280Go:
+	executeNext
 ;@ - - - - - - - - - - - - - - - - - - -
+takeIRQ:
 //	bic r1,r1,#0x18			// Clear Reset and NMI
-//	strb r1,[h6280optbl,#h6280_irqPending]
+//	strb r1,[h6280ptr,#h6280IrqPending]
 //whichIrq:
 	clz r0,r0
 	rsb r0,r0,#0x1f
@@ -1872,7 +1869,7 @@ irqContinue:
 	orr cycles,cycles,#CYC_I	;@ Disable IRQ
 	bic cycles,cycles,#CYC_D	;@ and decimal mode
 
-	ldr r0,[h6280optbl,#h6280RomMap+7*4]
+	ldr r0,[h6280ptr,#h6280RomMap+7*4]
 	ldrh h6280pc,[r0,r12]
 	encodePC					;@ Get IRQ vector
 
@@ -1893,13 +1890,10 @@ doBRK:						;@ Moved here for alignment
 ;@----------------------------------------------------------------------------
 timerFix:				;@ Timer fix.
 ;@----------------------------------------------------------------------------
-	setirqpin TIMIRQ_F
-;@----------------------------------------------------------------------------
-cliFix:					;@ Cli should be delayed by 1 instruction.
-;@----------------------------------------------------------------------------
-	ldr r0,[h6280optbl,#h6280NextTimeout_]
-	str r0,[h6280optbl,#h6280NextTimeout]
-	ldr r0,[h6280optbl,#h6280OldCycles]
+	setIrqPin TIMIRQ_F
+	ldr r0,[h6280ptr,#h6280NextTimeout_]
+	str r0,[h6280ptr,#h6280NextTimeout]
+	ldr r0,[h6280ptr,#h6280OldCycles]
 	b addCyclesNoTimer
 
 ;@----------------------------------------------------------------------------
@@ -2127,14 +2121,25 @@ T7D:	;@ ADC $nnnn,X
 ;@----------------------------------------------------------------------------
 
 ;@----------------------------------------------------------------------------
-h6280Reset:				;@ Called by cpuReset (r0-r9 are free to use)
+h6280SetResetPin:			;@ Can only be set
+;@----------------------------------------------------------------------------
+	ldrb r0,[h6280ptr,#h6280IrqPending]
+	orr r0,r0,#RESET_F
+	strb r0,[h6280ptr,#h6280IrqPending]
+	bx lr
+;@----------------------------------------------------------------------------
+h6280Init:				;@ In r0=h6280ptr.
+	.type h6280Init STT_FUNC
+;@----------------------------------------------------------------------------
+;@----------------------------------------------------------------------------
+h6280Reset:				;@ In r0=h6280ptr
 	.type h6280Reset STT_FUNC
 ;@----------------------------------------------------------------------------
-	stmfd sp!,{lr}
+	stmfd sp!,{r4-r11,lr}
 
 	mov r1,#0
-	str r1,[h6280optbl,#h6280MapperState]
-	str r1,[h6280optbl,#h6280MapperState+4]
+	str r1,[h6280ptr,#h6280MapperState]
+	str r1,[h6280ptr,#h6280MapperState+4]
 	bl reInitMapperData
 
 ;@---cpu reset
@@ -2148,30 +2153,31 @@ h6280Reset:				;@ Called by cpuReset (r0-r9 are free to use)
 	mov cycles,#CYC_I			;@ V=0, D=0, C=0, I=1 disable IRQ.
 
 	mov r0,#CYC_SHIFT
-	strb r0,[h6280optbl,#h6280ClockSpeed]			;@ Slow
-	str h6280a,[h6280optbl,#h6280IrqPending]		;@ Irq pending reset
-	strb h6280a,[h6280optbl,#h6280IrqDisable]		;@ Irq disable reset
+	strb r0,[h6280ptr,#h6280ClockSpeed]			;@ Slow
+	str h6280a,[h6280ptr,#h6280IrqPending]		;@ Irq pending reset
+	strb h6280a,[h6280ptr,#h6280IrqDisable]		;@ Irq disable reset
 	mov r0,#0x1F
-	strb r0,[h6280optbl,#h6280IrqPending+1]			;@ Irq disable mask reset
+	strb r0,[h6280ptr,#h6280IrqPending+1]			;@ Irq disable mask reset
 
-	ldr r0,[h6280optbl,#h6280RomMap+7*4]
+	ldr r0,[h6280ptr,#h6280RomMap+7*4]
 	ldr r1,=RES_VECTOR
 	ldrh h6280pc,[r0,r1]
 	encodePC					;@ Get RESET vector
+//	bl h6280SetResetPin
 
-	add r0,h6280optbl,#h6280Regs
+	add r0,h6280ptr,#h6280Regs
 	stmia r0,{h6280nz-h6280pc,h6280zpage}
-	ldmfd sp!,{pc}
+	ldmfd sp!,{r4-r11,pc}
 ;@----------------------------------------------------------------------------
-h6280SaveState:			;@ In r0=destination, r1=h6280optbl. Out r0=state size.
+h6280SaveState:			;@ In r0=destination, r1=h6280ptr. Out r0=state size.
 	.type   h6280SaveState STT_FUNC
 ;@----------------------------------------------------------------------------
-	stmfd sp!,{r4,h6280optbl,lr}
+	stmfd sp!,{r4,h6280ptr,lr}
 
 	sub r4,r0,#h6280Regs
-	mov h6280optbl,r1
+	mov h6280ptr,r1
 
-	add r1,h6280optbl,#h6280Regs
+	add r1,h6280ptr,#h6280Regs
 	mov r2,#h6280StateEnd-h6280StateStart	;@ Right now 0x38
 	bl memcpy
 
@@ -2181,25 +2187,25 @@ h6280SaveState:			;@ In r0=destination, r1=h6280optbl. Out r0=state size.
 	sub r0,r0,r2
 	str r0,[r4,#h6280RegPC]					;@ Normal m6809pc
 
-	ldmfd sp!,{r4,h6280optbl,lr}
+	ldmfd sp!,{r4,h6280ptr,lr}
 	mov r0,#h6280StateEnd-h6280StateStart	;@ Right now 0x38
 	bx lr
 ;@----------------------------------------------------------------------------
-h6280LoadState:			;@ In r0=h6280optbl, r1=source. Out r0=state size.
+h6280LoadState:			;@ In r0=h6280ptr, r1=source. Out r0=state size.
 	.type   h6280LoadState STT_FUNC
 ;@----------------------------------------------------------------------------
-	stmfd sp!,{h6280pc,h6280optbl,lr}
+	stmfd sp!,{h6280pc,h6280ptr,lr}
 
-	mov h6280optbl,r0
-	add r0,h6280optbl,#h6280Regs
+	mov h6280ptr,r0
+	add r0,h6280ptr,#h6280Regs
 	mov r2,#h6280StateEnd-h6280StateStart	;@ Right now 0x38
 	bl memcpy
 
-	ldr h6280pc,[h6280optbl,#h6280RegPC]	;@ Normal h6280pc
+	ldr h6280pc,[h6280ptr,#h6280RegPC]	;@ Normal h6280pc
 	encodePC
-	str h6280pc,[h6280optbl,#h6280RegPC]	;@ Rewrite offseted h6280pc
+	str h6280pc,[h6280ptr,#h6280RegPC]	;@ Rewrite offseted h6280pc
 
-	ldmfd sp!,{h6280pc,h6280optbl,lr}
+	ldmfd sp!,{h6280pc,h6280ptr,lr}
 ;@----------------------------------------------------------------------------
 h6280GetStateSize:		;@ Out r0=state size.
 	.type   h6280GetStateSize STT_FUNC
@@ -2209,7 +2215,7 @@ h6280GetStateSize:		;@ Out r0=state size.
 ;@----------------------------------------------------------------------------
 reInitMapperData:
 ;@----------------------------------------------------------------------------
-	add r0,h6280optbl,#h6280MapperState
+	add r0,h6280ptr,#h6280MapperState
 ;@----------------------------------------------------------------------------
 setupHuMapper:
 ;@----------------------------------------------------------------------------
@@ -2227,61 +2233,61 @@ huDataLoop:
 ;@----------------------------------------------------------------------------
 timerRead:					;@ 0x0C00-0x0FFF
 ;@----------------------------------------------------------------------------
-	ldr r0,[h6280optbl,#h6280TimerCycles]
+	ldr r0,[h6280ptr,#h6280TimerCycles]
 	sub r0,r0,#0x01000
 	and r0,r0,#0x7F000
-	ldrb r1,[h6280optbl,#h6280IoBuffer]
+	ldrb r1,[h6280ptr,#h6280IoBuffer]
 	and r1,r1,#0x80
 	orr r0,r1,r0,lsr#12
-	strb r0,[h6280optbl,#h6280IoBuffer]
+	strb r0,[h6280ptr,#h6280IoBuffer]
 	bx lr
 ;@----------------------------------------------------------------------------
 timerWrite:					;@ 0x0C00-0x0FFF
 ;@----------------------------------------------------------------------------
-	strb r0,[h6280optbl,#h6280IoBuffer]
+	strb r0,[h6280ptr,#h6280IoBuffer]
 	tst addy,#1
 	bne timer1Write
 ;@----------------------------------------------------------------------------
 timer0Write:				;@ 0x0C00
 ;@----------------------------------------------------------------------------
 	and r0,r0,#0x7f
-	strb r0,[h6280optbl,#h6280TimerLatch]
+	strb r0,[h6280ptr,#h6280TimerLatch]
 	bx lr
 ;@----------------------------------------------------------------------------
 timer1Write:				;@ 0x0C01
 ;@----------------------------------------------------------------------------
-	ldrb r1,[h6280optbl,#h6280TimerEnable]
-	strb r0,[h6280optbl,#h6280TimerEnable]
+	ldrb r1,[h6280ptr,#h6280TimerEnable]
+	strb r0,[h6280ptr,#h6280TimerEnable]
 	bic r0,r0,r1
 	tst r0,#1
 	bxeq lr						;@ Only reload counter if going from 0 -> 1
 
-	ldrb r0,[h6280optbl,#h6280TimerLatch]
+	ldrb r0,[h6280ptr,#h6280TimerLatch]
 	add r0,r0,#1
 	mov r0,r0,lsl#12			;@ x(1024x4)
-	ldrb r1,[h6280optbl,#h6280ClockSpeed]
+	ldrb r1,[h6280ptr,#h6280ClockSpeed]
 	sub r1,r1,#2
 	sub r0,r0,cycles,asr r1
-	str r0,[h6280optbl,#h6280TimerCycles]
+	str r0,[h6280ptr,#h6280TimerCycles]
 	bx lr
 
 ;@----------------------------------------------------------------------------
 irqRead:					;@ 0x1400-0x17FF
 ;@----------------------------------------------------------------------------
-	ldrb r0,[h6280optbl,#h6280IoBuffer]
+	ldrb r0,[h6280ptr,#h6280IoBuffer]
 	and r1,addy,#3
 	cmp r1,#2
-	ldrbeq r1,[h6280optbl,#h6280IrqDisable]	;@ IRQ2_R
-	ldrbhi r1,[h6280optbl,#h6280IrqPending]	;@ IRQ3_R
+	ldrbeq r1,[h6280ptr,#h6280IrqDisable]	;@ IRQ2_R
+	ldrbhi r1,[h6280ptr,#h6280IrqPending]	;@ IRQ3_R
 	andpl r1,r1,#0x07
 	bicpl r0,r0,#0x07
 	orrpl r0,r0,r1
-	strbpl r0,[h6280optbl,#h6280IoBuffer]
+	strbpl r0,[h6280ptr,#h6280IoBuffer]
 	bx lr
 ;@----------------------------------------------------------------------------
 irqWrite:					;@ 0x1400-0x17FF
 ;@----------------------------------------------------------------------------
-	strb r0,[h6280optbl,#h6280IoBuffer]
+	strb r0,[h6280ptr,#h6280IoBuffer]
 	and r1,addy,#3
 	cmp r1,#2
 	beq irq2Write
@@ -2291,9 +2297,9 @@ irqWrite:					;@ 0x1400-0x17FF
 irq2Write:					;@ Set disabled IRQs
 ;@----------------------------------------------------------------------------
 	and r0,r0,#0x07
-	strb r0,[h6280optbl,#h6280IrqDisable]	;@ Check for pending IRQ's?
+	strb r0,[h6280ptr,#h6280IrqDisable]	;@ Check for pending IRQ's?
 	eor r1,r0,#0x1F
-	strb r1,[h6280optbl,#h6280IrqPending+1]	;@ Mask used for irq check.
+	strb r1,[h6280ptr,#h6280IrqPending+1]	;@ Mask used for irq check.
 ;@------------------------
 ;@	ldrb r1,irqPending
 ;@	bic r0,r1,r0

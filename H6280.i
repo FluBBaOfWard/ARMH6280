@@ -17,10 +17,46 @@
 	h6280sp		.req r7			;@ bits 24-31=SP, bit 0=1.
 	cycles		.req r8
 	h6280pc		.req r9
-	h6280optbl	.req r10
+	h6280ptr	.req r10
 	h6280zpage	.req r11		;@ PCE_RAM
 	addy		.req r12		;@ keep this at r12 (scratch for APCS)
 
+;@----------------------------------------------------------------------------
+;@ ARM flags
+	.equ PSR_N, 0x80000000		;@ Negative (Sign)
+	.equ PSR_Z, 0x40000000		;@ Zero
+	.equ PSR_C, 0x20000000		;@ Carry
+	.equ PSR_V, 0x10000000		;@ Overflow
+
+
+;@ HuC6280 flags
+	.equ N, 0x80				;@ Sign (negative)
+	.equ V, 0x40				;@ Overflow
+	.equ T, 0x20				;@ T opcode
+	.equ B, 0x10				;@ Interrupt by BRK opcode
+	.equ D, 0x08				;@ Decimal mode
+	.equ I, 0x04				;@ Interrup Disable
+	.equ Z, 0x02				;@ Zero
+	.equ C, 0x01				;@ Carry
+
+;@----------------------------------------------------------------------------
+	.equ RES_VECTOR, 0xFFFE		;@ RESET interrupt vector address
+	.equ NMI_VECTOR, 0xFFFC		;@ NMI interrupt vector address
+	.equ TIM_VECTOR, 0xFFFA		;@ TIMER interrupt vector address
+	.equ IRQ_VECTOR, 0xFFF8		;@ VDC interrupt vector address
+	.equ BRK_VECTOR, 0xFFF6		;@ BRK/CD interrupt vector address
+;@----------------------------------------------------------------------------
+.equ NOCPUHACK, 2			;@ don't use JMP hack
+;@----------------------------------------------------------------------------
+	.equ CYC_SHIFT, 8
+	.equ CYCLE, 1<<CYC_SHIFT	;@ one cycle
+	.equ CYC_MASK, CYCLE-1		;@ Mask
+;@----------------------------------------------------------------------------
+;@ cycle flags- (stored in cycles reg for speed)
+	.equ CYC_C, 0x01			;@ Carry bit
+	.equ CYC_I, 0x04			;@ IRQ mask
+	.equ CYC_D, 0x08			;@ Decimal bit
+	.equ CYC_V, 0x40			;@ Overflow bit
 ;@----------------------------------------------------------------------------
 ;@ IRQ flags
 	.equ BRKIRQ_F, 0x01			;@ External IRQ (CD-ROM) flag

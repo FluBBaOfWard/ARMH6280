@@ -2,8 +2,9 @@ ARMH6280 revision history
 -=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 
-V2.9.2 - 2026-01-20 (FluBBa)
+V2.9.2 - 2026-01-21 (FluBBa)
 	Cleaned up code.
+	Optimized delayed IRQ check.
 
 V2.9.1 - 2021-02-01 (FluBBa)
 	Removed dependency on EMU_RAM for zero page register init.

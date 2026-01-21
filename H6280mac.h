@@ -10,67 +10,29 @@
 #endif
 
 #include "H6280.i"
-							;@ ARM flags
-	.equ PSR_N, 0x80000000		;@ Negative (Sign)
-	.equ PSR_Z, 0x40000000		;@ Zero
-	.equ PSR_C, 0x20000000		;@ Carry
-	.equ PSR_V, 0x10000000		;@ Overflow
-
-
-							;@ HuC6280 flags
-	.equ N, 0x80				;@ Sign (negative)
-	.equ V, 0x40				;@ Overflow
-	.equ T, 0x20				;@ T opcode?
-	.equ B, 0x10				;@ Interrupt by BRK opcode?
-	.equ D, 0x08				;@ Decimal mode
-	.equ I, 0x04				;@ Interrup Disable
-	.equ Z, 0x02				;@ Zero
-	.equ C, 0x01				;@ Carry
-
-;@----------------------------------------------------------------------------
-	.equ RES_VECTOR, 0xFFFE		;@ RESET interrupt vector address
-	.equ NMI_VECTOR, 0xFFFC		;@ NMI interrupt vector address
-	.equ TIM_VECTOR, 0xFFFA		;@ TIMER interrupt vector address
-	.equ IRQ_VECTOR, 0xFFF8		;@ VDC interrupt vector address
-	.equ BRK_VECTOR, 0xFFF6		;@ BRK/CD interrupt vector address
-;@----------------------------------------------------------------------------
-	.equ NOCPUHACK, 2			;@ don't use JMP hack
-;@----------------------------------------------------------------------------
-	.equ CYC_SHIFT, 8
-	.equ CYCLE, 1<<CYC_SHIFT	;@ one cycle
-	.equ CYC_MASK, CYCLE-1		;@ Mask
-;@----------------------------------------------------------------------------
-;@ cycle flags- (stored in cycles reg for speed)
-
-	.equ CYC_C, 0x01			;@ Carry bit
-	.equ CYC_I, 0x04			;@ IRQ mask
-	.equ CYC_D, 0x08			;@ Decimal bit
-	.equ CYC_V, 0x40			;@ Overflow bit
-;@----------------------------------------------------------------------------
-
 
 	.macro alignOpCode
 	.align 6
 	.endm
 
 	.macro setIrqPin x
-	ldrb r0,[h6280optbl,#h6280IrqPending]
+	ldrb r0,[h6280ptr,#h6280IrqPending]
 	orr r0,r0,#(\x)
-	strb r0,[h6280optbl,#h6280IrqPending]
+	strb r0,[h6280ptr,#h6280IrqPending]
 	.endm
 
 	.macro clearIrqPin x
-	ldrb r0,[h6280optbl,#h6280IrqPending]
+	ldrb r0,[h6280ptr,#h6280IrqPending]
 	bic r0,r0,#(\x)
-	strb r0,[h6280optbl,#h6280IrqPending]
+	strb r0,[h6280ptr,#h6280IrqPending]
 	.endm
 
 	.macro loadLastBank reg
-	ldr \reg,[h6280optbl,#h6280LastBank]
+	ldr \reg,[h6280ptr,#h6280LastBank]
 	.endm
 
 	.macro storeLastBank reg
-	str \reg,[h6280optbl,#h6280LastBank]
+	str \reg,[h6280ptr,#h6280LastBank]
 	.endm
 
 	.macro encodePC				;@ Translate h6280pc from HuC6280 PC to rom offset
@@ -106,19 +68,19 @@
 
 	.macro executeOpCode count
 	subs cycles,cycles,#(\count)*4*CYCLE
-	addpl pc,h6280optbl,r0,lsl#6
+	addpl pc,h6280ptr,r0,lsl#6
 	b h6280OutOfCycles
 	.endm
 
 	.macro executeOpCode_c count
 	sbcs cycles,cycles,#(\count)*4*CYCLE
-	addpl pc,h6280optbl,r0,lsl#6
+	addpl pc,h6280ptr,r0,lsl#6
 	b h6280OutOfCycles
 	.endm
 
 	.macro executeNext
 	getNextOpcode
-	add pc,h6280optbl,r0,lsl#6
+	add pc,h6280ptr,r0,lsl#6
 	.endm
 
 	.macro fetch count

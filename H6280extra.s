@@ -153,11 +153,9 @@ _E3z:
 	cmp r2,#4					;@ VCE pal write
 	beq _E3y
 
-	ldr r6,=vdcAdrInc
-	ldrb r6,[r6]
-	mov r6,r6,lsl#16
 	ldr r11,=vram_w_adr
 	ldr addy,[r11]
+	mov r6,addy,lsl#16			;@ vdcAdrInc
 
 	ldr r7,=DIRTYTILES
 	ldr r2,=PCE_VRAM
@@ -205,15 +203,13 @@ PaletteCpy:
 ;@----------------------------------------------------------------------------
 
 
-#ifdef ARM9
 	.section .text				;@ For the NDS
-#endif
 	.align 2
 
 ;@----------------------------------------------------------------------------
-h6280Hacks:			;@ called by CPU_reset (r0-r9 are free to use)
+h6280Hacks:			;@ called by cpuReset
 ;@----------------------------------------------------------------------------
-//	str lr,[sp,#-4]!
+	stmfd sp!,{r4-r8,lr}
 
 ;@---cpu reset
 	ldr r8,=gHackFlags
@@ -258,8 +254,8 @@ nr0:
 	subs r4,r4,#1
 	bpl nr0
 
+	ldmfd sp!,{r4-r8,lr}
 	bx lr
-//	ldr pc,[sp],#4
 ;@----------------------------------------------------------------------------
 normalOps:
 	.long _10,_30,_4C,_50,_70,_80,_90,_B0,_D0,_F0,_58,_E3

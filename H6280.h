@@ -13,15 +13,14 @@ extern "C" {
 #endif
 
 typedef struct {
-//	u32 regs[8]
 	u32 regNz;
 	u32 regA;
 	u32 regX;
 	u32 regY;
 	u32 regSP;
-	u32 regCy;
+	u32 cycles;
 	u8 *regPC;
-	u8 *regZP;
+	u8 *zeroPage;
 	u8 mapperState[8];
 	u32 timerCycles;
 	u32 irqPending;

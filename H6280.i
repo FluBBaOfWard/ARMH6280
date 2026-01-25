@@ -67,15 +67,16 @@
 ;@----------------------------------------------------------------------------
 
 	.struct -128				// Changes section so make sure it's set before real code.
+h6280StateStart:
 h6280Regs:
 h6280RegNz:			.long 0
 h6280RegA:			.long 0
 h6280RegX:			.long 0
 h6280RegY:			.long 0
 h6280RegSP:			.long 0
-h6280RegCy:			.long 0
+h6280Cycles:		.long 0
 h6280RegPC:			.long 0
-h6280RegZP:			.long 0
+h6280ZeroPage:		.long 0
 h6280MapperState:	.space 8
 h6280TimerCycles:	.long 0
 h6280IrqPending:	.long 0
@@ -93,9 +94,11 @@ h6280NextTimeout_:	.long 0
 h6280NextTimeout:	.long 0
 h6280ST1Func:		.long 0
 h6280ST2Func:		.long 0
+h6280StateEnd:
 h6280End:
 h6280RomMap:		.space 8*4
 h6280Size  = h6280End-h6280Regs
+h6280StateSize = h6280StateEnd-h6280StateStart
 //h6280_opz:			.space 256*4
 
 ;@----------------------------------------------------------------------------

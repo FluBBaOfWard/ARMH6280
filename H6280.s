@@ -52,7 +52,6 @@
 #endif
 
 	alignOpCode
-h6280StateStart:
 	;@ Group these together for save/loadstate
 	.space 8*4	;@ cpuregs (nz,a,x,y,sp,cycles,pc,zp)
 	.space 8	;@ h6280mapperstate
@@ -65,7 +64,6 @@ h6280StateStart:
 	.byte 0		;@ h6280ClockSpeed
 	.byte 0		;@ h6280NMIPin
 	.space 2	;@ h6280Padding
-h6280StateEnd:
 	.long 0		;@ h6280LastBank:		Last memmap added to PC (used to calculate current PC)
 	.long 0 	;@ h6280OldCycles:		Backup of cycles
 	.long 0		;@ h6280NextTimeout:	Jump here when cycles runs out
@@ -2180,43 +2178,45 @@ h6280SaveState:			;@ In r0=destination, r1=h6280ptr. Out r0=state size.
 ;@----------------------------------------------------------------------------
 	stmfd sp!,{r4,h6280ptr,lr}
 
-	sub r4,r0,#h6280Regs
+	sub r4,r0,#h6280StateStart
 	mov h6280ptr,r1
 
-	add r1,h6280ptr,#h6280Regs
-	mov r2,#h6280StateEnd-h6280StateStart	;@ Right now 0x38
+	add r1,h6280ptr,#h6280StateStart
+	mov r2,#h6280StateSize		;@ Right now 0x38
 	bl memcpy
 
 	;@ Convert copied PC to not offseted.
-	ldr r0,[r4,#h6280RegPC]					;@ Offsetted m6809pc
+	ldr r0,[r4,#h6280RegPC]		;@ Offsetted m6809pc
 	loadLastBank r2
 	sub r0,r0,r2
-	str r0,[r4,#h6280RegPC]					;@ Normal m6809pc
+	str r0,[r4,#h6280RegPC]		;@ Normal m6809pc
 
 	ldmfd sp!,{r4,h6280ptr,lr}
-	mov r0,#h6280StateEnd-h6280StateStart	;@ Right now 0x38
+	mov r0,#h6280StateSize		;@ Right now 0x38
 	bx lr
 ;@----------------------------------------------------------------------------
-h6280LoadState:			;@ In r0=h6280ptr, r1=source. Out r0=state size.
+h6280LoadState:				;@ In r0=h6280ptr, r1=source. Out r0=state size.
 	.type   h6280LoadState STT_FUNC
 ;@----------------------------------------------------------------------------
-	stmfd sp!,{h6280pc,h6280ptr,lr}
+	stmfd sp!,{h6280pc,h6280ptr,h6280zpage,lr}
 
 	mov h6280ptr,r0
-	add r0,h6280ptr,#h6280Regs
-	mov r2,#h6280StateEnd-h6280StateStart	;@ Right now 0x38
+	add r0,h6280ptr,#h6280StateStart
+	mov r2,#h6280StateSize		;@ Right now 0x38
 	bl memcpy
 
+	ldr h6280zpage,[h6280ptr,#h6280RomMap]
+	str h6280zpage,[h6280ptr,#h6280ZeroPage]
 	ldr h6280pc,[h6280ptr,#h6280RegPC]	;@ Normal h6280pc
 	encodePC
 	str h6280pc,[h6280ptr,#h6280RegPC]	;@ Rewrite offseted h6280pc
 
-	ldmfd sp!,{h6280pc,h6280ptr,lr}
+	ldmfd sp!,{h6280pc,h6280ptr,h6280zpage,lr}
 ;@----------------------------------------------------------------------------
-h6280GetStateSize:		;@ Out r0=state size.
+h6280GetStateSize:			;@ Out r0=state size.
 	.type   h6280GetStateSize STT_FUNC
 ;@----------------------------------------------------------------------------
-	mov r0,#h6280StateEnd-h6280StateStart	;@ Right now 0x38
+	mov r0,#h6280StateSize		;@ Right now 0x38
 	bx lr
 ;@----------------------------------------------------------------------------
 reInitMapperData:

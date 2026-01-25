@@ -153,7 +153,7 @@ _E3z:
 	cmp r2,#4					;@ VCE pal write
 	beq _E3y
 
-	ldr r11,=vram_w_adr
+	ldr r11,=vdcWriteAdr
 	ldr addy,[r11]
 	mov r6,addy,lsl#16			;@ vdcAdrInc
 

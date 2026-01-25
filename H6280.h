@@ -13,31 +13,33 @@ extern "C" {
 #endif
 
 typedef struct {
-// m6280Regs[8]
-	u32 h6280RegNz;
-	u32 h6280RegA;
-	u32 h6280RegX;
-	u32 h6280RegY;
-	u32 h6280RegSP;
-	u32 h6280RegCy;
-	u32 h6280RegPC;
-	u32 h6280RegZP;
-	u8 h6280MapperState[8];
-	u32 h6280TimerCycles;
-	u32 h6280IrqPending;
-	u8 h6280IrqDisable;
-	u8 h6280IoBuffer;
-	u8 h6280TimerLatch;
-	u8 h6280TimerEnable;
-	u8 h6280ClockSpeed;
-	u8 h6280NmiPin;
-	u8 h6280Padding[2];
+//	u32 regs[8]
+	u32 regNz;
+	u32 regA;
+	u32 regX;
+	u32 regY;
+	u32 regSP;
+	u32 regCy;
+	u8 *regPC;
+	u8 *regZP;
+	u8 mapperState[8];
+	u32 timerCycles;
+	u32 irqPending;
+	u8 irqDisable;
+	u8 ioBuffer;
+	u8 timerLatch;
+	u8 timerEnable;
+	u8 clockSpeed;
+	u8 nmiPin;
+	u8 padding[2];
 
-	void *h6280LastBank;
-	int h6280OldCycles;
-	void *h6280NextTimeout_;
-	void *h6280NextTimeout;
-	u32 h6280RomMap[8];
+	u8 *lastBank;
+	int oldCycles;
+	void (*nextTimeout_)(void);
+	void (*nextTimeout)(void);
+	void (*st1Func)(u8 val);
+	void (*st2Func)(u8 val);
+	u32 romMap[8];
 } H6280Core;
 
 extern H6280Core m6280OpTable;

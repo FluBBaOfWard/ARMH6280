@@ -15,6 +15,15 @@
 	.align 6
 	.endm
 
+	.macro h6280BailOut			;@ This can be used to exit emulation early.
+	orr cycles,cycles,#0xF0000000
+	.endm
+
+	.macro h6280FixBailOut		;@ Used to fix Cycles after early BailOut.
+	mov cycles,cycles,lsl#4
+	mov cycles,cycles,asr#4
+	.endm
+
 	.macro setIrqPin x
 	ldrb r0,[h6280ptr,#h6280IrqPending]
 	orr r0,r0,#(\x)

@@ -22,14 +22,14 @@
 	addy		.req r12		;@ keep this at r12 (scratch for APCS)
 
 ;@----------------------------------------------------------------------------
-;@ ARM flags
+							;@ ARM flags
 	.equ PSR_N, 0x80000000		;@ Negative (Sign)
 	.equ PSR_Z, 0x40000000		;@ Zero
 	.equ PSR_C, 0x20000000		;@ Carry
 	.equ PSR_V, 0x10000000		;@ Overflow
 
 
-;@ HuC6280 flags
+							;@ HuC6280 flags
 	.equ N, 0x80				;@ Sign (negative)
 	.equ V, 0x40				;@ Overflow
 	.equ T, 0x20				;@ T opcode
@@ -85,14 +85,16 @@ h6280TimerLatch:	.byte 0
 h6280TimerEnable:	.byte 0
 h6280ClockSpeed:	.byte 0
 h6280NMIPin:		.byte 0
-h6280Padding:		.space 2
+h6280Padding:		.skip 2
 
-h6280LastBank:		.space 4
-h6280OldCycles:		.space 4
-h6280NextTimeout_:	.space 4
-h6280NextTimeout:	.space 4
+h6280LastBank:		.long 0
+h6280OldCycles:		.long 0
+h6280NextTimeout_:	.long 0
+h6280NextTimeout:	.long 0
+h6280ST1Func:		.long 0
+h6280ST2Func:		.long 0
 h6280End:
-h6280RomMap:		.space 32
+h6280RomMap:		.space 8*4
 h6280Size  = h6280End-h6280Regs
 //h6280_opz:			.space 256*4
 

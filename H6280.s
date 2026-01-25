@@ -9,17 +9,17 @@
 
 #include "H6280mac.h"
 
+	.global h6280OpTable
+	.global opCodeEnd
+	.global SF2Mapper
+
 	.global h6280Reset
 	.global h6280SetNMIPin
 	.global h6280SetIRQPin
 	.global h6280RestoreAndRunXCycles
 	.global h6280RunXCycles
 	.global h6280CheckIrqs
-	.global h6280OpTable
-	.global opCodeEnd
-	.global h6280OutOfCycles
 	.global huMapper
-	.global SF2Mapper
 	.global irqRead
 	.global irqWrite
 	.global timerRead
@@ -70,6 +70,8 @@ h6280StateEnd:
 	.long 0 	;@ h6280OldCycles:		Backup of cycles
 	.long 0		;@ h6280NextTimeout:	Jump here when cycles runs out
 	.long 0 	;@ h6280NextTimeout_:	Backup of nexttimeout
+	.long 0 	;@ h6280ST2Func:		Function of ST2 opcode
+	.long 0 	;@ h6280ST3Func:		Function of ST3 opcode
 	.space 8*4	;@ h6280RomMap
 
 	alignOpCode
@@ -196,9 +198,8 @@ _12:	;@ ORA ($nn)
 _13:	;@ ST1 #$nn			Store immediate value at VDC port#1
 ;@----------------------------------------------------------------------------
 	readmemimm
-	ldr r1,=vdcRegPtrL_			;@ What function
 	adr lr,_130
-	ldr pc,[r1]					;@ What function
+	ldr pc,[h6280ptr,#h6280ST1Func]	;@ What function
 _130:
 	fetch 5						;@ 4+1
 	.pool
@@ -302,9 +303,8 @@ _22:	;@ SAX swap A & X
 _23:	;@ ST2 #$nn			Store immediate value at VDC port#2
 ;@----------------------------------------------------------------------------
 	readmemimm
-	ldr r1,=vdcRegPtrH_			;@ What function
 	adr lr,_230
-	ldr pc,[r1]					;@ What function
+	ldr pc,[h6280ptr,#h6280ST2Func]	;@ What function
 _230:
 	fetch 5						;@ 4+1
 	.pool
@@ -2165,9 +2165,15 @@ h6280Reset:				;@ In r0=h6280ptr
 	encodePC					;@ Get RESET vector
 //	bl h6280SetResetPin
 
+	adr r0,stDummy
+	str r0,[h6280ptr,#h6280ST1Func]
+	str r0,[h6280ptr,#h6280ST2Func]
+
 	add r0,h6280ptr,#h6280Regs
 	stmia r0,{h6280nz-h6280pc,h6280zpage}
-	ldmfd sp!,{r4-r11,pc}
+	ldmfd sp!,{r4-r11,lr}
+stDummy:
+	bx lr
 ;@----------------------------------------------------------------------------
 h6280SaveState:			;@ In r0=destination, r1=h6280ptr. Out r0=state size.
 	.type   h6280SaveState STT_FUNC

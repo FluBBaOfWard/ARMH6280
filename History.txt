@@ -2,9 +2,10 @@ ARMH6280 revision history
 -=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 
-V2.9.2 - 2026-01-21 (FluBBa)
-	Cleaned up code.
+V2.9.2 - 2026-01-25 (FluBBa)
+	Added function pointers for the ST opcodes.
 	Optimized delayed IRQ check.
+	Cleaned up code.
 
 V2.9.1 - 2021-02-01 (FluBBa)
 	Removed dependency on EMU_RAM for zero page register init.

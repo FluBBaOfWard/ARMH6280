@@ -1920,8 +1920,7 @@ _xx:	;@ ???					Invalid opcode
 ;@----------------------------------------------------------------------------
 opADC_Dec:
 ;@----------------------------------------------------------------------------
-	opADCD
-	fetch 5
+	opADCD 5
 ;@----------------------------------------------------------------------------
 opSBC_Dec:
 ;@----------------------------------------------------------------------------
@@ -1930,8 +1929,7 @@ opSBC_Dec:
 ;@----------------------------------------------------------------------------
 opADCT_Dec:
 ;@----------------------------------------------------------------------------
-	opADCTD
-	fetch 5
+	opADCTD 5
 
 ;@----------------------------------------------------------------------------
 T01:	;@ ORA ($nn,X)
@@ -2205,7 +2203,9 @@ h6280LoadState:				;@ In r0=h6280ptr, r1=source. Out r0=state size.
 	mov r2,#h6280StateSize		;@ Right now 0x38
 	bl memcpy
 
-	ldr h6280zpage,[h6280ptr,#h6280RomMap]
+	bl reInitMapperData
+
+	ldr h6280zpage,[h6280ptr,#h6280RomMap+4]
 	str h6280zpage,[h6280ptr,#h6280ZeroPage]
 	ldr h6280pc,[h6280ptr,#h6280RegPC]	;@ Normal h6280pc
 	encodePC
@@ -2306,12 +2306,7 @@ irq2Write:					;@ Set disabled IRQs
 	strb r0,[h6280ptr,#h6280IrqDisable]	;@ Check for pending IRQ's?
 	eor r1,r0,#0x1F
 	strb r1,[h6280ptr,#h6280IrqPending+1]	;@ Mask used for irq check.
-;@------------------------
-;@	ldrb r1,irqPending
-;@	bic r0,r1,r0
-;@	bne H6280_checkirqdisable	;@ Either this or...
-;@	movne cycles,#0				;@ This.
-;@------------------------
+//	orr cycles,cycles,#0xC0000000			;@ Check IRQs next instruction.
 	bx lr
 ;@----------------------------------------------------------------------------
 irq3Write:					;@ Acknowledge Timer IRQ

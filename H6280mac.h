@@ -364,11 +364,11 @@
 	adcs h6280a,h6280a,r0,ror#8
 	bicvc cycles,cycles,#CYC_V	;@ V
 	getNextOpcode
-	mov h6280nz,h6280a,asr#24		;@ NZ
+	mov h6280nz,h6280a,asr#24	;@ NZ
 	executeOpCode_c \cyc
 	.endm
 
-	.macro opADCD				;@ Doesn't affect V
+	.macro opADCD cyc			;@ Doesn't affect V
 	orrs r0,r0,cycles,lsl#31
 	orrmi h6280a,h6280a,#0x00800000
 	mov h6280a,h6280a,ror#28
@@ -381,8 +381,9 @@
 	addscs h6280a,h6280a,#0x60000000
 	bic cycles,cycles,#CYC_C	;@ Clear C
 	orrcs cycles,cycles,#CYC_C	;@ C
-
+	getNextOpcode
 	mov h6280nz,h6280a,asr#24 	;@ NZ
+	executeOpCode_c \cyc
 	.endm
 
 
@@ -399,14 +400,13 @@
 	orr cycles,cycles,#CYC_C+CYC_V	;@ Prepare C & V
 	adcs r2,r2,r0,ror#8
 	bicvc cycles,cycles,#CYC_V	;@ V
-
+	getNextOpcode
 	mov h6280nz,r2,asr#24 		;@ NZ
-
 	strb h6280nz,[h6280zpage,h6280x,lsr#24]
-	fetch_c \cyc
+	executeOpCode_c \cyc
 	.endm
 
-	.macro opADCTD				;@ Doesn't affect V
+	.macro opADCTD cyc			;@ Doesn't affect V
 	ldrb r2,[h6280zpage,h6280x,lsr#24]
 	mov r2,r2,lsl#24
 
@@ -422,10 +422,10 @@
 	addscs r2,r2,#0x60000000
 	bic cycles,cycles,#CYC_C	;@ Clear C
 	orrcs cycles,cycles,#CYC_C	;@ C
-
+	getNextOpcode
 	mov h6280nz,r2,asr#24 		;@ NZ
-
 	strb h6280nz,[h6280zpage,h6280x,lsr#24]
+	executeOpCode_c \cyc
 	.endm
 
 
@@ -824,38 +824,38 @@
 //	mov r1,r5,lsr#24
 //	strb r1,[h6280zpage,r0,ror#24]	;@ Push X
 
-	ldrb r3,[h6280pc],#1
-	ldrb r1,[h6280pc],#1
-	orr r3,r3,r1,lsl#8			;@ Load r3 = source
 	ldrb r5,[h6280pc],#1
 	ldrb r1,[h6280pc],#1
-	orr r5,r5,r1,lsl#8			;@ Load r5 = destination
+	orr r5,r5,r1,lsl#8			;@ Load r5 = source (X)
 	ldrb r6,[h6280pc],#1
 	ldrb r1,[h6280pc],#1
-	orrs r6,r6,r1,lsl#8			;@ Load r6 = length
+	orr r6,r6,r1,lsl#8			;@ Load r6 = destination (Y)
+	ldrb r3,[h6280pc],#1
+	ldrb r1,[h6280pc],#1
+	orrs r3,r3,r1,lsl#8			;@ Load r3 = length (A)
 
-	moveq r6,#0x10000
+	moveq r3,#0x10000
 	mov r1,#6*4*CYCLE
-	mul r1,r6,r1
+	mul r1,r3,r1
 	sub cycles,cycles,r1		;@ cycles=r8
-	orr r3,r3,r3,lsl#16
 	orr r5,r5,r5,lsl#16
+	orr r6,r6,r6,lsl#16
 	bx lr
 	.endm
 
 	.macro doTAI				;@ Transfer Alt Inc
 	bl transferPre
-	add r3,r3,#0x10000
+	add r5,r5,#0x10000
 0:
-	mov r3,r3,ror#16
-	mov addy,r3,lsr#16
+	mov r5,r5,ror#16
+	mov addy,r5,lsr#16
 	readmemabs
 
-	mov addy,r5,lsr#16
+	mov addy,r6,lsr#16
 	writememabs
 
-	add r5,r5,#0x10000
-	subs r6,r6,#1
+	add r6,r6,#0x10000
+	subs r3,r3,#1
 	bne 0b						;@ In: addy,r0=val(bits 8-31=?)
 								;@ Out: r0,r1,r2=?
 	ldmfd sp!,{r3,r5,r6}
@@ -866,15 +866,15 @@
 	.macro doTDD				;@ Transfer Dec Dec
 	bl transferPre
 0:
-	mov addy,r3,lsr#16
+	mov addy,r5,lsr#16
 	readmemabs
 
-	mov addy,r5,lsr#16
+	mov addy,r6,lsr#16
 	writememabs
 
-	sub r3,r3,#0x10000
 	sub r5,r5,#0x10000
-	subs r6,r6,#1
+	sub r6,r6,#0x10000
+	subs r3,r3,#1
 	bne 0b
 
 	ldmfd sp!,{r3,r5,r6}
@@ -884,17 +884,17 @@
 
 	.macro doTIA				;@ Transfer Inc Alt
 	bl transferPre
-	add r5,r5,#0x10000
+	add r6,r6,#0x10000
 0:
-	mov r5,r5,ror#16
-	mov addy,r3,lsr#16
+	mov r6,r6,ror#16
+	mov addy,r5,lsr#16
 	readmemabs
 
-	mov addy,r5,lsr#16
+	mov addy,r6,lsr#16
 	writememabs
 
-	add r3,r3,#0x10000
-	subs r6,r6,#1
+	add r5,r5,#0x10000
+	subs r3,r3,#1
 	bne 0b
 
 	ldmfd sp!,{r3,r5,r6}
@@ -905,15 +905,15 @@
 	.macro doTII				;@ Transfer Inc Inc
 	bl transferPre
 0:
-	mov addy,r3,lsr#16
+	mov addy,r5,lsr#16
 	readmemabs
 
-	mov addy,r5,lsr#16
+	mov addy,r6,lsr#16
 	writememabs
 
-	add r3,r3,#0x10000
 	add r5,r5,#0x10000
-	subs r6,r6,#1
+	add r6,r6,#0x10000
+	subs r3,r3,#1
 	bne 0b
 
 	ldmfd sp!,{r3,r5,r6}
@@ -924,14 +924,14 @@
 	.macro doTIN				;@ Transfer Inc None
 	bl transferPre
 0:
-	mov addy,r3,lsr#16
+	mov addy,r5,lsr#16
 	readmemabs
 
-	mov addy,r5,lsr#16
+	mov addy,r6,lsr#16
 	writememabs
 
-	add r3,r3,#0x10000
-	subs r6,r6,#1
+	add r5,r5,#0x10000
+	subs r3,r3,#1
 	bne 0b
 
 	ldmfd sp!,{r3,r5,r6}

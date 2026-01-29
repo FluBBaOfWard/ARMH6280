@@ -1,8 +1,8 @@
 ARMH6280 To do
 --------------
-	Use lowSpeed clocks for timer and execute function?
 	Move clockSpeed bit from variable to cycle reg?
 	Change clockSpeed to indicate how much input clock should be shifted?
+	Use lowSpeed clocks for timer and execute function?
 
 	Use complete memory read on more instructions (readMemIIY instead of doIIY).
 	Make core completly objectified.

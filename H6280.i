@@ -92,9 +92,9 @@ h6280LastBank:		.long 0
 h6280OldCycles:		.long 0
 h6280NextTimeout_:	.long 0
 h6280NextTimeout:	.long 0
+h6280StateEnd:
 h6280ST1Func:		.long 0
 h6280ST2Func:		.long 0
-h6280StateEnd:
 h6280End:
 h6280RomMap:		.space 8*4
 h6280Size  = h6280End-h6280Regs

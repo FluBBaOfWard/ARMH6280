@@ -2,9 +2,10 @@ ARMH6280 revision history
 -=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 
-V2.9.2 - 2026-01-25 (FluBBa)
+V2.9.2 - 2026-01-29 (FluBBa)
 	Added function pointers for the ST opcodes.
 	Optimized delayed IRQ check.
+	Rewrote transfer instructions to use other registers.
 	Cleaned up code.
 
 V2.9.1 - 2021-02-01 (FluBBa)

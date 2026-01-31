@@ -18,7 +18,7 @@
 	cycles		.req r8
 	h6280pc		.req r9
 	h6280ptr	.req r10
-	h6280zpage	.req r11		;@ PCE_RAM
+	h6280zpage	.req r11		;@ pceRAM
 	addy		.req r12		;@ keep this at r12 (scratch for APCS)
 
 ;@----------------------------------------------------------------------------
@@ -77,16 +77,18 @@ h6280RegSP:			.long 0
 h6280Cycles:		.long 0
 h6280RegPC:			.long 0
 h6280ZeroPage:		.long 0
+h6280IrqPending:	.byte 0
+h6280IrqMask:		.byte 0
+h6280Padding0:		.skip 1
+h6280NMIPin:		.byte 0
 h6280MapperState:	.space 8
 h6280TimerCycles:	.long 0
-h6280IrqPending:	.long 0
-h6280IrqDisable:	.byte 0
-h6280IoBuffer:		.byte 0
 h6280TimerLatch:	.byte 0
 h6280TimerEnable:	.byte 0
+h6280IrqDisable:	.byte 0
 h6280ClockSpeed:	.byte 0
-h6280NMIPin:		.byte 0
-h6280Padding:		.skip 2
+h6280IoBuffer:		.byte 0
+h6280Padding:		.skip 3
 
 h6280LastBank:		.long 0
 h6280OldCycles:		.long 0

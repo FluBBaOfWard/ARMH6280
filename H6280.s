@@ -10,7 +10,6 @@
 #include "H6280mac.h"
 
 	.global h6280OpTable
-	.global opCodeEnd
 	.global SF2Mapper
 
 	.global h6280Reset
@@ -19,12 +18,14 @@
 	.global h6280RestoreAndRunXCycles
 	.global h6280RunXCycles
 	.global h6280CheckIrqs
-	.global huMapper
+	.global translate6280PCToOffset
+	.global h6280SaveState
+	.global h6280LoadState
+	.global h6280GetStateSize
 	.global irqRead
 	.global irqWrite
 	.global timerRead
 	.global timerWrite
-	.global translatePCToOffset
 	.global reInitMapperData
 
 	.global _10
@@ -54,16 +55,18 @@
 	alignOpCode
 	;@ Group these together for save/loadstate
 	.space 8*4	;@ cpuregs (nz,a,x,y,sp,cycles,pc,zp)
+	.byte 0 	;@ h6280IrqPending
+	.byte 0 	;@ h6280IrqMask
+	.skip 1		;@ h6280Padding0
+	.byte 0		;@ h6280NMIPin
 	.space 8	;@ h6280mapperstate
 	.long 0 	;@ h6280TimerCycles
-	.long 0 	;@ h6280IrqPending
-	.byte 0 	;@ h6280IrqDisable
-	.byte 0		;@ h6280IoBuffer		Reads from $0800 -> $17ff
 	.byte 0		;@ h6280TimerLatch		From IO 0x0C00
 	.byte 0		;@ h6280TimerEnable		From IO 0x0C01
+	.byte 0 	;@ h6280IrqDisable
 	.byte 0		;@ h6280ClockSpeed
-	.byte 0		;@ h6280NMIPin
-	.space 2	;@ h6280Padding
+	.byte 0		;@ h6280IoBuffer		Reads from $0800 -> $17ff
+	.skip 3		;@ h6280Padding
 	.long 0		;@ h6280LastBank:		Last memmap added to PC (used to calculate current PC)
 	.long 0 	;@ h6280OldCycles:		Backup of cycles
 	.long 0		;@ h6280NextTimeout:	Jump here when cycles runs out
@@ -1753,7 +1756,7 @@ retranslatePCToOffset:
 	loadLastBank r0
 	sub h6280pc,h6280pc,r0
 ;@----------------------------------------------------------------------------
-translatePCToOffset:		;@ In = h6280pc, out = translated h6280pc
+translate6280PCToOffset:		;@ In = h6280pc, out = translated h6280pc
 ;@----------------------------------------------------------------------------
 	and r0,h6280pc,#0xE000
 	add r1,h6280ptr,#h6280RomMap
@@ -2153,7 +2156,7 @@ h6280Reset:				;@ In r0=h6280ptr
 	str h6280a,[h6280ptr,#h6280IrqPending]		;@ Irq pending reset
 	strb h6280a,[h6280ptr,#h6280IrqDisable]		;@ Irq disable reset
 	mov r0,#0x1F
-	strb r0,[h6280ptr,#h6280IrqPending+1]			;@ Irq disable mask reset
+	strb r0,[h6280ptr,#h6280IrqMask]			;@ Irq disable mask reset
 
 	ldr r0,[h6280ptr,#h6280RomMap+7*4]
 	ldr r1,=RES_VECTOR
@@ -2294,19 +2297,17 @@ irqRead:					;@ 0x1400-0x17FF
 irqWrite:					;@ 0x1400-0x17FF
 ;@----------------------------------------------------------------------------
 	strb r0,[h6280ptr,#h6280IoBuffer]
-	and r1,addy,#3
-	cmp r1,#2
-	beq irq2Write
-	bhi irq3Write
-	bx lr
+	movs r1,addy,lsl#31
+	bxcc lr
+	bmi irq3Write
 ;@----------------------------------------------------------------------------
 irq2Write:					;@ Set disabled IRQs
 ;@----------------------------------------------------------------------------
 	and r0,r0,#0x07
 	strb r0,[h6280ptr,#h6280IrqDisable]	;@ Check for pending IRQ's?
 	eor r1,r0,#0x1F
-	strb r1,[h6280ptr,#h6280IrqPending+1]	;@ Mask used for irq check.
-//	orr cycles,cycles,#0xC0000000			;@ Check IRQs next instruction.
+	strb r1,[h6280ptr,#h6280IrqMask]	;@ Mask used for irq check.
+//	orr cycles,cycles,#0xC0000000		;@ Check IRQs next instruction.
 	bx lr
 ;@----------------------------------------------------------------------------
 irq3Write:					;@ Acknowledge Timer IRQ
@@ -2316,7 +2317,7 @@ irq3Write:					;@ Acknowledge Timer IRQ
 
 ;@----------------------------------------------------------------------------
 #ifdef ARM9
-	.section .dtcm, "a", %progbits				;@ For the NDS
+	.section .dtcm, "a", %progbits		;@ For the NDS ARM9
 #endif
 ;@----------------------------------------------------------------------------
 h6280OpTableT:

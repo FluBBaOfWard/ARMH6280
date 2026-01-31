@@ -45,7 +45,7 @@
 	.endm
 
 	.macro encodePC				;@ Translate h6280pc from HuC6280 PC to rom offset
-	bl translatePCToOffset		;@ In=h6280pc, out=r0
+	bl translate6280PCToOffset	;@ In=h6280pc, out=r0
 	.endm
 
 	.macro reEncodePC			;@ Retranslate h6280pc romoffset

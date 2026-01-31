@@ -21,16 +21,18 @@ typedef struct {
 	u32 cycles;
 	u8 *regPC;
 	u8 *zeroPage;
+	u8 irqPending;
+	u8 irqMask;
+	u8 padding0[1];
+	u8 nmiPin;
 	u8 mapperState[8];
 	u32 timerCycles;
-	u32 irqPending;
-	u8 irqDisable;
-	u8 ioBuffer;
 	u8 timerLatch;
 	u8 timerEnable;
+	u8 irqDisable;
 	u8 clockSpeed;
-	u8 nmiPin;
-	u8 padding[2];
+	u8 ioBuffer;
+	u8 padding[3];
 
 	u8 *lastBank;
 	int oldCycles;
@@ -41,7 +43,7 @@ typedef struct {
 	u32 romMap[8];
 } H6280Core;
 
-extern H6280Core m6280OpTable;
+extern H6280Core h6280OpTable;
 
 void h6280Reset(int type);
 
@@ -67,11 +69,11 @@ int h6280LoadState(H6280Core *cpu, const void *source);
  */
 int h6280GetStateSize(void);
 
-void h6280SetNMIPin(bool set);
-void h6280SetIRQPin(bool set);
 void h6280RestoreAndRunXCycles(int cycles);
 void h6280RunXCycles(int cycles);
-void h6280CheckIrqs(void);
+void h6280SetResetPin(void);
+void h6280SetNMIPin(bool set);
+void h6280SetIRQPin(bool set);
 
 #ifdef __cplusplus
 } // extern "C"

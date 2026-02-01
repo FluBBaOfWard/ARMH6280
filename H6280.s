@@ -2183,7 +2183,7 @@ h6280SaveState:			;@ In r0=destination, r1=h6280ptr. Out r0=state size.
 	mov h6280ptr,r1
 
 	add r1,h6280ptr,#h6280StateStart
-	mov r2,#h6280StateSize		;@ Right now 0x38
+	mov r2,#h6280StateSize
 	bl memcpy
 
 	;@ Convert copied PC to not offseted.
@@ -2193,7 +2193,7 @@ h6280SaveState:			;@ In r0=destination, r1=h6280ptr. Out r0=state size.
 	str r0,[r4,#h6280RegPC]		;@ Normal m6809pc
 
 	ldmfd sp!,{r4,h6280ptr,lr}
-	mov r0,#h6280StateSize		;@ Right now 0x38
+	mov r0,#h6280StateSize
 	bx lr
 ;@----------------------------------------------------------------------------
 h6280LoadState:				;@ In r0=h6280ptr, r1=source. Out r0=state size.
@@ -2203,12 +2203,13 @@ h6280LoadState:				;@ In r0=h6280ptr, r1=source. Out r0=state size.
 
 	mov h6280ptr,r0
 	add r0,h6280ptr,#h6280StateStart
-	mov r2,#h6280StateSize		;@ Right now 0x38
+	mov r2,#h6280StateSize
 	bl memcpy
 
 	bl reInitMapperData
 
 	ldr h6280zpage,[h6280ptr,#h6280RomMap+4]
+	add h6280zpage,h6280zpage,#0x2000
 	str h6280zpage,[h6280ptr,#h6280ZeroPage]
 	ldr h6280pc,[h6280ptr,#h6280RegPC]	;@ Normal h6280pc
 	encodePC
@@ -2219,7 +2220,7 @@ h6280LoadState:				;@ In r0=h6280ptr, r1=source. Out r0=state size.
 h6280GetStateSize:			;@ Out r0=state size.
 	.type   h6280GetStateSize STT_FUNC
 ;@----------------------------------------------------------------------------
-	mov r0,#h6280StateSize		;@ Right now 0x38
+	mov r0,#h6280StateSize
 	bx lr
 ;@----------------------------------------------------------------------------
 reInitMapperData:

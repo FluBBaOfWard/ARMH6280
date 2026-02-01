@@ -379,8 +379,7 @@
 	movs h6280a,h6280a,lsl#1
 	cmncc h6280a,#0x60000000
 	addscs h6280a,h6280a,#0x60000000
-	bic cycles,cycles,#CYC_C	;@ Clear C
-	orrcs cycles,cycles,#CYC_C	;@ C
+	orr cycles,cycles,#CYC_C	;@ Prepare C
 	getNextOpcode
 	mov h6280nz,h6280a,asr#24 	;@ NZ
 	executeOpCode_c \cyc
@@ -420,8 +419,7 @@
 	movs r2,r2,lsl#1
 	cmncc r2,#0x60000000
 	addscs r2,r2,#0x60000000
-	bic cycles,cycles,#CYC_C	;@ Clear C
-	orrcs cycles,cycles,#CYC_C	;@ C
+	orr cycles,cycles,#CYC_C	;@ Prepare C
 	getNextOpcode
 	mov h6280nz,r2,asr#24 		;@ NZ
 	strb h6280nz,[h6280zpage,h6280x,lsr#24]

@@ -2139,6 +2139,9 @@ h6280Reset:				;@ In r0=h6280ptr
 	mov r1,#0
 	str r1,[h6280ptr,#h6280MapperState]
 	str r1,[h6280ptr,#h6280MapperState+4]
+	str r1,[h6280ptr,#h6280IrqPending]
+	str r1,[h6280ptr,#h6280TimerCycles]
+	str r1,[h6280ptr,#h6280TimerLatch]
 	bl reInitMapperData
 
 ;@---cpu reset

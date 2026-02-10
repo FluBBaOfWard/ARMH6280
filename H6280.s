@@ -1823,6 +1823,7 @@ timerScanlineHook:
 ;@- - - - - - - - - - - - - - - - -
 	mov r0,r1,lsr#2
 	rsb r1,r2,#0
+	mov r1,r1,asr#2
 	str r1,[h6280ptr,#h6280OldCycles]	;@ Save as many cycles as we steal so we can use them later on.
 	adr r1,timerFix
 	str r1,[h6280ptr,#h6280NextTimeout]

@@ -2,11 +2,12 @@ ARMH6280 revision history
 -=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 
-V2.9.2 - 2026-02-10 (FluBBa)
+V2.9.2 - 2026-02-14 (FluBBa)
 	Added function pointers for the ST opcodes.
 	Fixed timer counting.
 	Fixed initialisation of state.
 	Fixed load state.
+	Fixed undocumented opcodes.
 	Optimized delayed IRQ check.
 	Optimized IRQ registers write.
 	Rewrote transfer instructions to use other registers.

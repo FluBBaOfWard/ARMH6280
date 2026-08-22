@@ -44,8 +44,8 @@
 	.syntax unified
 	.arm
 
-#ifdef ARM9
-	.section .itcm, "ax", %progbits		;@ For the NDS
+#ifdef NDS
+	.section .itcm, "ax", %progbits		;@ For the NDS ARM9
 #elif GBA
 	.section .iwram, "ax", %progbits	;@ For the GBA
 #else
@@ -2375,4 +2375,4 @@ h6280OpTableT:
 
 ;@----------------------------------------------------------------------------
 
-#endif // #ifdef __arm__
+#endif // __arm__

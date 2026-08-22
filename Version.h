@@ -6,4 +6,4 @@
 //  Copyright © 2003-2026 Fredrik Ahlström. All rights reserved.
 //
 
-#define ARMH6280VERSION "V2.9.2"
+#define ARMH6280VERSION "V2.9.3"

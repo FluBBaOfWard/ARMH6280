@@ -79,4 +79,4 @@ void h6280SetIRQPin(bool set);
 } // extern "C"
 #endif
 
-#endif // H6280_HEADER
+#endif // !H6280_HEADER

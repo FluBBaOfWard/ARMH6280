@@ -2,6 +2,9 @@ ARMH6280 revision history
 -=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 
+V2.9.3 - 2026-08-22 (FluBBa)
+	Cleaned up code.
+
 V2.9.2 - 2026-02-14 (FluBBa)
 	Added function pointers for the ST opcodes.
 	Fixed timer counting.

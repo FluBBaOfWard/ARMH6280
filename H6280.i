@@ -15,7 +15,7 @@
 	h6280x		.req r5			;@ bits  0-23=0
 	h6280y		.req r6			;@ bits  0-23=0
 	h6280sp		.req r7			;@ bits 24-31=SP, bit 0=1.
-	cycles		.req r8
+	cycles		.req r8			;@ Also VDIC flags
 	h6280pc		.req r9
 	h6280ptr	.req r10
 	h6280zpage	.req r11		;@ pceRAM
@@ -35,7 +35,7 @@
 	.equ T, 0x20				;@ T opcode
 	.equ B, 0x10				;@ Interrupt by BRK opcode
 	.equ D, 0x08				;@ Decimal mode
-	.equ I, 0x04				;@ Interrup Disable
+	.equ I, 0x04				;@ Interrupt Disable
 	.equ Z, 0x02				;@ Zero
 	.equ C, 0x01				;@ Carry
 
@@ -46,7 +46,7 @@
 	.equ IRQ_VECTOR, 0xFFF8		;@ VDC interrupt vector address
 	.equ BRK_VECTOR, 0xFFF6		;@ BRK/CD interrupt vector address
 ;@----------------------------------------------------------------------------
-.equ NOCPUHACK, 2			;@ don't use JMP hack
+	.equ NOCPUHACK, 2			;@ don't use JMP hack
 ;@----------------------------------------------------------------------------
 	.equ CYC_SHIFT, 8
 	.equ CYCLE, 1<<CYC_SHIFT	;@ one cycle

@@ -1798,10 +1798,10 @@ h6280DelayIrqCheck:				;@ Irq can be delayed by 1 instruction.
 h6280OutOfCycles:
 ;@----------------------------------------------------------------------------
 	sub h6280pc,h6280pc,#1
-	mov cycles,cycles,lsl#2		;@ Check for delayed irq check.
-	movs cycles,cycles,asr#2
-	bpl h6280CheckIrqs
-	ldr pc,[h6280ptr,#h6280NextTimeout]
+	movs r0,cycles,lsl#2		;@ Check for delayed irq check.
+	ldrmi pc,[h6280ptr,#h6280NextTimeout]
+	mov cycles,r0,asr#2
+	b h6280CheckIrqs
 
 ;@----------------------------------------------------------------------------
 h6280RestoreAndRunXCycles:	;@ r0 = Number of fast cycles to run

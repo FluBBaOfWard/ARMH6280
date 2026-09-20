@@ -16,7 +16,7 @@
 	.endm
 
 	.macro h6280BailOut			;@ This can be used to exit emulation early.
-	orr cycles,cycles,#0xF0000000
+	orr cycles,cycles,#0xC0000000
 	.endm
 
 	.macro h6280FixBailOut		;@ Used to fix Cycles after early BailOut.

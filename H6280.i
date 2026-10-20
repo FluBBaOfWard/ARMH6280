@@ -46,7 +46,7 @@
 	.equ IRQ_VECTOR, 0xFFF8		;@ VDC interrupt vector address
 	.equ BRK_VECTOR, 0xFFF6		;@ BRK/CD interrupt vector address
 ;@----------------------------------------------------------------------------
-	.equ NOCPUHACK, 2			;@ don't use JMP hack
+	.equ NOCPUHACK, 2			;@ Force no cpu hacks
 ;@----------------------------------------------------------------------------
 	.equ CYC_SHIFT, 8
 	.equ CYCLE, 1<<CYC_SHIFT	;@ one cycle

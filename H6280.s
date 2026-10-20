@@ -69,8 +69,8 @@
 	.skip 3		;@ h6280Padding
 	.long 0		;@ h6280LastBank:		Last memmap added to PC (used to calculate current PC)
 	.long 0 	;@ h6280OldCycles:		Backup of cycles
-	.long 0		;@ h6280NextTimeout:	Jump here when cycles runs out
 	.long 0 	;@ h6280NextTimeout_:	Backup of nexttimeout
+	.long 0		;@ h6280NextTimeout:	Jump here when cycles runs out
 	.long 0 	;@ h6280ST2Func:		Function of ST2 opcode
 	.long 0 	;@ h6280ST3Func:		Function of ST3 opcode
 	.space 8*4	;@ h6280RomMap
@@ -343,7 +343,8 @@ _28:	;@ PLP
 	eatcycles 4
 
 	tst r2,#CYC_I
-	bne h6280DelayIrqCheck
+	// h6280DelayIrqCheck				;@ Irq can be delayed by 1 instruction.
+	orrne cycles,cycles,#0xC0000000
 	executeNext
 ;@----------------------------------------------------------------------------
 	alignOpCode
@@ -668,8 +669,9 @@ _58:	;@ CLI
 	eatCycles 2
 	tst cycles,#CYC_I
 	bic cycles,cycles,#CYC_I
-	bne h6280DelayIrqCheck
-	fetch 0
+	// h6280DelayIrqCheck				;@ Irq can be delayed by 1 instruction.
+	orrne cycles,cycles,#0xC0000000
+	executeNext
 ;@----------------------------------------------------------------------------
 	alignOpCode
 _59:	;@ EOR $nnnn,Y
@@ -1781,7 +1783,7 @@ h6280SetNMIPin:				;@ NMI is edge triggered
 	strbne r0,[h6280ptr,#h6280IrqPending]
 	bx lr
 ;@----------------------------------------------------------------------------
-h6280SetIRQPin:
+h6280SetIRQPin:				;@ r0=assert or not
 ;@----------------------------------------------------------------------------
 	cmp r0,#0
 	ldrb r0,[h6280ptr,#h6280IrqPending]
@@ -1790,19 +1792,15 @@ h6280SetIRQPin:
 	strb r0,[h6280ptr,#h6280IrqPending]
 	bx lr
 ;@----------------------------------------------------------------------------
-h6280DelayIrqCheck:				;@ Irq can be delayed by 1 instruction.
-;@----------------------------------------------------------------------------
-	orr cycles,cycles,#0xC0000000
-	executeNext
-;@----------------------------------------------------------------------------
 h6280OutOfCycles:
 ;@----------------------------------------------------------------------------
-	sub h6280pc,h6280pc,#1
+	sub h6280pc,h6280pc,#1		;@ Fix up pc
 	movs r0,cycles,lsl#2		;@ Check for delayed irq check.
 	ldrmi pc,[h6280ptr,#h6280NextTimeout]
-	mov cycles,r0,asr#2
+	mov cycles,r0,lsr#2
 	b h6280CheckIrqs
-
+h6280Exit:
+	ldmfd sp!,{pc}
 ;@----------------------------------------------------------------------------
 h6280RestoreAndRunXCycles:	;@ r0 = Number of fast cycles to run
 ;@----------------------------------------------------------------------------
@@ -1811,6 +1809,7 @@ h6280RestoreAndRunXCycles:	;@ r0 = Number of fast cycles to run
 ;@----------------------------------------------------------------------------
 h6280RunXCycles:			;@ r0 = Number of fast cycles to run
 ;@----------------------------------------------------------------------------
+	stmfd sp!,{lr}
 ;@----------------------------------------------------------------------------
 timerScanlineHook:
 ;@----------------------------------------------------------------------------
@@ -1893,9 +1892,9 @@ doBRK:						;@ Moved here for alignment
 timerFix:				;@ Timer fix.
 ;@----------------------------------------------------------------------------
 	setIrqPin TIMIRQ_F
-	ldr r0,[h6280ptr,#h6280NextTimeout_]
-	str r0,[h6280ptr,#h6280NextTimeout]
 	ldr r0,[h6280ptr,#h6280OldCycles]
+	adr r1,h6280Exit
+	str r1,[h6280ptr,#h6280NextTimeout]
 	b addCyclesNoTimer
 
 ;@----------------------------------------------------------------------------
@@ -2198,6 +2197,8 @@ h6280Reset:				;@ In r0=h6280ptr
 	encodePC					;@ Get RESET vector
 //	bl h6280SetResetPin
 
+	ldr r0,=h6280Exit
+	str r0,[h6280ptr,#h6280NextTimeout]
 	adr r0,stDummy
 	str r0,[h6280ptr,#h6280ST1Func]
 	str r0,[h6280ptr,#h6280ST2Func]

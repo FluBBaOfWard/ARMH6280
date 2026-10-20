@@ -1,4 +1,4 @@
-# ARMH6280 V2.9.2
+# ARMH6280 V2.9.3
 
 Hu6280 CPU emulator for ARM32.
 

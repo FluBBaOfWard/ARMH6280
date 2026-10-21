@@ -1795,6 +1795,7 @@ h6280SetIRQPin:				;@ r0=assert or not
 h6280OutOfCycles:
 ;@----------------------------------------------------------------------------
 	sub h6280pc,h6280pc,#1		;@ Fix up pc
+noCycles:
 	movs r0,cycles,lsl#2		;@ Check for delayed irq check.
 	ldrmi pc,[h6280ptr,#h6280NextTimeout]
 	mov cycles,r0,lsr#2
@@ -1814,15 +1815,15 @@ h6280RunXCycles:			;@ r0 = Number of fast cycles to run
 timerScanlineHook:
 ;@----------------------------------------------------------------------------
 	ldrb r1,[h6280ptr,#h6280TimerEnable]
-	tst r1,#1
-	beq timerDisabled
+	tst r1,#1					;@ Timer enabled ?
+	beq addCyclesNoTimer
 	ldr r1,[h6280ptr,#h6280TimerCycles]
 	subs r2,r1,r0,lsl#2
 	bpl noTIrqYet
 ;@- - - - - - - - - - - - - - - - -
 	mov r0,r1,lsr#2
 	rsb r1,r2,#0
-	mov r1,r1,asr#2
+	mov r1,r1,lsr#2
 	str r1,[h6280ptr,#h6280OldCycles]	;@ Save as many cycles as we steal so we can use them later on.
 	adr r1,timerFix
 	str r1,[h6280ptr,#h6280NextTimeout]
@@ -1830,14 +1831,13 @@ timerScanlineHook:
 ;@	setIrqPin TIMIRQ_F
 	ldrb r1,[h6280ptr,#h6280TimerLatch]
 	add r1,r1,#1
-	add r2,r2,r1,lsl#12			;@ Latch x 1024 x 4
+	add r2,r2,r1,lsl#10+2		;@ Latch x 1024 x 4
 noTIrqYet:
 	str r2,[h6280ptr,#h6280TimerCycles]
-timerDisabled:
 addCyclesNoTimer:
 	ldrb r1,[h6280ptr,#h6280ClockSpeed]
-	add cycles,cycles,r0,lsl r1			;@ Add cycles at current speed
-
+	adds cycles,cycles,r0,lsl r1		;@ Add cycles at current speed
+	bmi noCycles
 ;@----------------------------------------------------------------------------
 h6280CheckIrqs:
 	ldr r1,[h6280ptr,#h6280IrqPending]
@@ -2283,7 +2283,7 @@ timerRead:					;@ 0x0C00-0x0FFF
 	and r0,r0,#0x7F000
 	ldrb r1,[h6280ptr,#h6280IoBuffer]
 	and r1,r1,#0x80
-	orr r0,r1,r0,lsr#12
+	orr r0,r1,r0,lsr#10+2
 	strb r0,[h6280ptr,#h6280IoBuffer]
 	bx lr
 ;@----------------------------------------------------------------------------
@@ -2309,7 +2309,7 @@ timer1Write:				;@ 0x0C01
 
 	ldrb r0,[h6280ptr,#h6280TimerLatch]
 	add r0,r0,#1
-	mov r0,r0,lsl#12			;@ x(1024x4)
+	mov r0,r0,lsl#10+2			;@ x1024 x 4
 	ldrb r1,[h6280ptr,#h6280ClockSpeed]
 	sub r1,r1,#2
 	sub r0,r0,cycles,asr r1

@@ -2,7 +2,8 @@ ARMH6280 revision history
 -=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 
-V2.9.3 - 2026-10-20 (FluBBa)
+V2.9.3 - 2026-10-21 (FluBBa)
+	Fixed Timer handling vs cpu cycles.
 	Cleaned up code.
 
 V2.9.2 - 2026-02-14 (FluBBa)

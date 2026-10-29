@@ -714,36 +714,32 @@
 	tst cycles,#CYC_D
 	bne opSBC_Dec
 
-	movs r1,cycles,lsr#1		;@ Get C
+	movs r1,cycles,lsr#1			;@ Get C
 	sbcs h6280a,h6280a,r0,lsl#24
 	orr cycles,cycles,#CYC_C+CYC_V	;@ Prepare C & V
 	and h6280a,h6280a,#0xff000000
-	bicvc cycles,cycles,#CYC_V	;@ V
+	bicvc cycles,cycles,#CYC_V		;@ V
 	getNextOpcode
 	mov h6280nz,h6280a,asr#24		;@ NZ
 	executeOpCode_c \cyc
 	.endm
 
-	.macro opSBCD				;@ Doesn't affect V
-	mov r1,#0
-	movs cycles,cycles,lsr#1	;@ Get C
-	mov r0,r0,ror#31
-	orrcc r0,r0,#0x01
+	.macro opSBCD cyc
+	movs r1,cycles,lsr#1			;@ Get C
+	subcc r0,r0,#0x00000100
+	sbcs h6280a,h6280a,r0,ror#8
+	mov h6280nz,h6280a,asr#24 		;@ NZ
+	bic cycles,cycles,#CYC_C		;@ Clear C
+	orrcs cycles,cycles,#CYC_C		;@ C
+	subcc h6280a,h6280a,#0x60000000
+
 	mov h6280a,h6280a,ror#28
-	subs h6280a,h6280a,r0,lsl#23
-	movcc r1,#0x06000000
-
-	sbc r0,h6280a,r0,lsr#5
-	movs r0,r0,lsl#28
-	adc cycles,cycles,cycles	;@ C
-	eor cycles,cycles,#CYC_C	;@ C
-
-	orrcs r1,r1,#0x60000000
-	orr h6280a,r0,h6280a,lsr#4
-	sub h6280a,h6280a,r1
-
-	and h6280a,h6280a,#0xff000000
-	mov h6280nz,h6280a,asr#24 	;@ NZ
+	mvn r0,r0,ror#31
+	cmp h6280a,r0,lsl#27
+	subcs h6280a,h6280a,#0x60000000
+	getNextOpcode
+	mov h6280a,h6280a,ror#4
+	executeOpcode \cyc
 	.endm
 
 	.macro opSMB bit

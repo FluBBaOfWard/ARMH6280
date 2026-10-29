@@ -2,6 +2,9 @@ ARMH6280 revision history
 -=-=-=-=-=-=-=-=-=-=-=-=-=-
 
 
+V2.9.4 - 2026-10-29 (FluBBa)
+	Fixed SBC decimal mode a bit.
+
 V2.9.3 - 2026-10-21 (FluBBa)
 	Fixed Timer handling vs cpu cycles.
 	Cleaned up code.

@@ -358,7 +358,7 @@
 	tst cycles,#CYC_D
 	bne opADC_Dec
 
-	movs r1,cycles,lsr#1		;@ Get C
+	tst cycles,cycles,lsr#1        	;@ Get C
 	subcs r0,r0,#0x00000100
 	orr cycles,cycles,#CYC_C+CYC_V	;@ Prepare C & V
 	adcs h6280a,h6280a,r0,ror#8
@@ -369,20 +369,21 @@
 	.endm
 
 	.macro opADCD cyc			;@ Doesn't affect V
-	orrs r0,r0,cycles,lsl#31
-	orrmi h6280a,h6280a,#0x00800000
-	mov h6280a,h6280a,ror#28
-	adds h6280a,h6280a,r0,ror#4
-	cmncc h6280a,#0x60000000
-	addcs h6280a,h6280a,#0x60000001
-	mov h6280a,h6280a,ror#5
-	movs h6280a,h6280a,lsl#1
-	cmncc h6280a,#0x60000000
-	addscs h6280a,h6280a,#0x60000000
-	orr cycles,cycles,#CYC_C	;@ Prepare C
+	movs cycles,cycles,lsr#1	;@ Get C
+	subcs r0,r0,#0x00000100
+	eor r1,r0,h6280a,lsr#24
+	adcs h6280a,h6280a,r0,ror#8
+	eor r1,r1,h6280a,lsr#24
+	cmncc h6280a,#0x66000000
+	addcs h6280a,h6280a,#0x60000000
+	adc cycles,cycles,cycles	;@ Set C
+	movs r1,r1,lsl#28
+	movcc r1,h6280a,lsl#4
+	cmncc r1,#0x60000000
+	addcs h6280a,h6280a,#0x06000000
 	getNextOpcode
 	mov h6280nz,h6280a,asr#24 	;@ NZ
-	executeOpCode_c \cyc
+	executeOpCode \cyc
 	.endm
 
 
@@ -394,7 +395,7 @@
 	ldrb r2,[h6280zpage,h6280x,lsr#24]
 	mov r2,r2,lsl#24
 
-	movs r1,cycles,lsr#1		;@ Get C
+	tst cycles,cycles,lsr#1        	;@ Get C
 	subcs r0,r0,#0x00000100
 	orr cycles,cycles,#CYC_C+CYC_V	;@ Prepare C & V
 	adcs r2,r2,r0,ror#8
@@ -409,17 +410,18 @@
 	ldrb r2,[h6280zpage,h6280x,lsr#24]
 	mov r2,r2,lsl#24
 
-	orrs r0,r0,cycles,lsl#31
-	orrmi r2,r2,#0x00800000
-	mov r2,r2,ror#28
-	adds r2,r2,r0,ror#4
-	cmncc r2,#0x60000000
-	addcs r2,r2,#0x60000001
-	mov r2,r2,ror#5
-	movs r2,r2,lsl#1
-	cmncc r2,#0x60000000
-	addscs r2,r2,#0x60000000
-	orr cycles,cycles,#CYC_C	;@ Prepare C
+	movs cycles,cycles,lsr#1	;@ Get C
+	subcs r0,r0,#0x00000100
+	eor r1,r0,r2,lsr#24
+	adcs r2,r2,r0,ror#8
+	eor r1,r1,r2,lsr#24
+	cmncc r2,#0x66000000
+	addcs r2,r2,#0x60000000
+	adc cycles,cycles,cycles	;@ Set C
+	movs r1,r1,lsl#28
+	movcc r1,r2,lsl#4
+	cmncc r1,#0x60000000
+	addcs r2,r2,#0x06000000
 	getNextOpcode
 	mov h6280nz,r2,asr#24 		;@ NZ
 	strb h6280nz,[h6280zpage,h6280x,lsr#24]
@@ -431,7 +433,7 @@
 	readmem
 	and h6280a,h6280a,r0,lsl#24
 	getNextOpcode
-	mov h6280nz,h6280a,asr#24		;@ NZ
+	mov h6280nz,h6280a,asr#24	;@ NZ
 	executeOpCode \cyc
 	.endm
 
@@ -439,7 +441,7 @@
 	readmem
 	ldrb r2,[h6280zpage,h6280x,lsr#24]
 	and r2,r2,r0
-	orr h6280nz,r2,r2,lsl#24		;@ NZ
+	orr h6280nz,r2,r2,lsl#24	;@ NZ
 	getNextOpcode
 	strb r2,[h6280zpage,h6280x,lsr#24]
 	executeOpCode \cyc
@@ -505,12 +507,12 @@
 
 	.macro opBIT cyc
 	readmem
-	bic cycles,cycles,#CYC_V	;@ Clear V
+	bic cycles,cycles,#CYC_V		;@ Clear V
 	tst r0,#V
 	and h6280nz,r0,h6280a,lsr#24	;@ Z
 	orr h6280nz,h6280nz,r0,lsl#24	;@ N
 	getNextOpcode
-	orrne cycles,cycles,#CYC_V	;@ V
+	orrne cycles,cycles,#CYC_V		;@ V
 	executeOpCode \cyc
 	.endm
 
@@ -596,7 +598,7 @@
 	.macro opDEC cyc
 	readmem
 	sub r0,r0,#1
-	orr h6280nz,r0,r0,lsl#24		;@ NZ
+	orr h6280nz,r0,r0,lsl#24	;@ NZ
 	writemem
 	fetch \cyc
 	.endm
@@ -605,7 +607,7 @@
 	readmem
 	eor h6280a,h6280a,r0,lsl#24
 	getNextOpcode
-	mov h6280nz,h6280a,asr#24		;@ NZ
+	mov h6280nz,h6280a,asr#24	;@ NZ
 	executeOpCode \cyc
 	.endm
 
@@ -623,7 +625,7 @@
 	.macro opINC cyc
 	readmem
 	add r0,r0,#1
-	orr h6280nz,r0,r0,lsl#24		;@ NZ
+	orr h6280nz,r0,r0,lsl#24	;@ NZ
 	writemem
 	fetch \cyc
 	.endm
@@ -714,7 +716,7 @@
 	tst cycles,#CYC_D
 	bne opSBC_Dec
 
-	movs r1,cycles,lsr#1			;@ Get C
+	tst cycles,cycles,lsr#1			;@ Get C
 	sbcs h6280a,h6280a,r0,lsl#24
 	orr cycles,cycles,#CYC_C+CYC_V	;@ Prepare C & V
 	and h6280a,h6280a,#0xff000000
@@ -725,20 +727,18 @@
 	.endm
 
 	.macro opSBCD cyc
-	movs r1,cycles,lsr#1			;@ Get C
+	movs cycles,cycles,lsr#1		;@ Get C
 	subcc r0,r0,#0x00000100
+	eor r1,r0,h6280a,lsr#24
 	sbcs h6280a,h6280a,r0,ror#8
-	mov h6280nz,h6280a,asr#24 		;@ NZ
-	bic cycles,cycles,#CYC_C		;@ Clear C
-	orrcs cycles,cycles,#CYC_C		;@ C
+	eor r1,r1,h6280a,lsr#24
 	subcc h6280a,h6280a,#0x60000000
+	adc cycles,cycles,cycles		;@ Set C
+	tst r1,#0x10					;@ This should not change C
+	subne h6280a,h6280a,#0x06000000
 
-	mov h6280a,h6280a,ror#28
-	mvn r0,r0,ror#31
-	cmp h6280a,r0,lsl#27
-	subcs h6280a,h6280a,#0x60000000
 	getNextOpcode
-	mov h6280a,h6280a,ror#4
+	mov h6280nz,h6280a,asr#24 		;@ NZ
 	executeOpcode \cyc
 	.endm
 
@@ -784,12 +784,12 @@
 
 	.macro opTSB cyc
 	readmem
-	bic cycles,cycles,#CYC_V	;@ Clear V
+	bic cycles,cycles,#CYC_V		;@ Clear V
 	tst r0,#V
-	orrne cycles,cycles,#CYC_V	;@ V
+	orrne cycles,cycles,#CYC_V		;@ V
 	orr h6280nz,r0,h6280a,lsr#24	;@ Z
 	orr h6280nz,h6280nz,r0,lsl#24	;@ N
-	orr r0,r0,h6280a,lsr#24		;@ Result
+	orr r0,r0,h6280a,lsr#24			;@ Result
 	writemem
 	fetch \cyc
 	.endm

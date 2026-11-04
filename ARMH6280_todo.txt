@@ -1,6 +1,5 @@
 ARMH6280 To do
 --------------
-	Use lowSpeed clocks for timer and execute function?
 	Do test with pc recalculation every instruction to see if it fixes any games.
 
 	Use complete memory read on more instructions (readMemIIY instead of doIIY).

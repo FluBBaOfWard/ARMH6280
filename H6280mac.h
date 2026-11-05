@@ -371,15 +371,14 @@
 	.macro opADCD cyc			;@ Doesn't affect V
 	movs cycles,cycles,lsr#1	;@ Get C
 	subcs r0,r0,#0x00000100
-	eor r1,r0,h6280a,lsr#24
+	and r1,h6280a,#0x0F000000
+	bic r2,r0,#0xF0
+	adc r1,r1,r2,ror#8
 	adcs h6280a,h6280a,r0,ror#8
-	eor r1,r1,h6280a,lsr#24
 	cmncc h6280a,#0x66000000
 	addcs h6280a,h6280a,#0x60000000
 	adc cycles,cycles,cycles	;@ Set C
-	movs r1,r1,lsl#28
-	movcc r1,h6280a,lsl#4
-	cmncc r1,#0x60000000
+	cmp r1,#0x0A000000
 	addcs h6280a,h6280a,#0x06000000
 	getNextOpcode
 	mov h6280nz,h6280a,asr#24 	;@ NZ
@@ -407,25 +406,24 @@
 	.endm
 
 	.macro opADCTD cyc			;@ Doesn't affect V
-	ldrb r2,[h6280zpage,h6280x,lsr#24]
-	mov r2,r2,lsl#24
+	ldrb addy,[h6280zpage,h6280x,lsr#24]
+	mov addy,addy,lsl#24
 
 	movs cycles,cycles,lsr#1	;@ Get C
 	subcs r0,r0,#0x00000100
-	eor r1,r0,r2,lsr#24
-	adcs r2,r2,r0,ror#8
-	eor r1,r1,r2,lsr#24
-	cmncc r2,#0x66000000
-	addcs r2,r2,#0x60000000
+	and r1,addy,#0x0F000000
+	bic r2,r0,#0xF0
+	adc r1,r1,r2,ror#8
+	adcs addy,addy,r0,ror#8
+	cmncc addy,#0x66000000
+	addcs addy,addy,#0x60000000
 	adc cycles,cycles,cycles	;@ Set C
-	movs r1,r1,lsl#28
-	movcc r1,r2,lsl#4
-	cmncc r1,#0x60000000
-	addcs r2,r2,#0x06000000
+	cmp r1,#0x0A000000
+	addcs addy,addy,#0x06000000
 	getNextOpcode
-	mov h6280nz,r2,asr#24 		;@ NZ
+	mov h6280nz,addy,asr#24 		;@ NZ
 	strb h6280nz,[h6280zpage,h6280x,lsr#24]
-	executeOpCode_c \cyc
+	executeOpCode \cyc
 	.endm
 
 
